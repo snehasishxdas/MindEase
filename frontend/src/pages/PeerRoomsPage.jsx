@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   RefreshCw
 } from 'lucide-react';
+import { apiRequest, clientId } from '../api';
 
 const ROOMS = [
   { id: 'exam', name: 'Exam Pressure & Deadlines', icon: '📚', desc: 'Vent safely about finals, submissions, and thesis stress.' },
@@ -44,18 +45,10 @@ export default function PeerRoomsPage({ onOpenCrisis }) {
     }
     setUserHandle(savedHandle);
 
-    // Load messages from localStorage
-    const savedMsgs = localStorage.getItem('mindease_peer_messages');
-    if (savedMsgs) {
-      try {
-        setMessages(JSON.parse(savedMsgs));
-      } catch (e) {
-        setMessages([]);
-      }
-    } else {
-      setMessages([]);
-    }
-  }, []);
+    apiRequest(`/api/peer-messages?room_id=${encodeURIComponent(currentRoom)}`)
+      .then(rows => setMessages(rows.map(row => ({ ...row, id: row.id, roomId: row.room_id, timestamp: new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }))))
+      .catch(() => setMessages([]));
+  }, [currentRoom]);
 
   const regenerateHandle = () => {
     const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
@@ -66,7 +59,7 @@ export default function PeerRoomsPage({ onOpenCrisis }) {
     setUserHandle(newHandle);
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputContent.trim()) return;
 
@@ -81,18 +74,16 @@ export default function PeerRoomsPage({ onOpenCrisis }) {
       return;
     }
 
-    const newMsg = {
-      id: Date.now().toString(),
-      roomId: currentRoom,
-      author: userHandle,
-      content: inputContent.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      likes: 0
-    };
-
-    const updated = [newMsg, ...messages];
-    setMessages(updated);
-    localStorage.setItem('mindease_peer_messages', JSON.stringify(updated));
+    try {
+      const saved = await apiRequest('/api/peer-messages', { method: 'POST', body: JSON.stringify({
+        roomId: currentRoom, clientId: clientId(), author: userHandle, content: inputContent.trim()
+      })});
+      const newMsg = { ...saved, id: saved.id, roomId: saved.room_id, timestamp: new Date(saved.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+      setMessages(prev => [newMsg, ...prev]);
+    } catch {
+      setSafetyNotice('The message could not be posted. Please try again.');
+      return;
+    }
     setInputContent('');
     setSafetyNotice('');
   };
@@ -115,7 +106,6 @@ export default function PeerRoomsPage({ onOpenCrisis }) {
       return m;
     });
     setMessages(updated);
-    localStorage.setItem('mindease_peer_messages', JSON.stringify(updated));
   };
 
   const flagMessage = (id) => {
@@ -159,7 +149,7 @@ export default function PeerRoomsPage({ onOpenCrisis }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-light)' }}>
           <Info className="w-4 h-4" />
-          <span>Zero personal data collected • End-to-end client isolation</span>
+          <span>No name or academic record collected • Anonymous client ID only</span>
         </div>
       </div>
 

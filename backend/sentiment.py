@@ -1,9 +1,12 @@
 from functools import lru_cache
+import os
 
+from dotenv import load_dotenv
 from transformers import pipeline
 
+load_dotenv()
 
-MODEL_NAME = "syedkhalid0/RoBERTa-Sentimental-Analysis-v1"
+MODEL_NAME = os.environ.get("HF_SENTIMENT_MODEL", "syedkhalid0/RoBERTa-Sentimental-Analysis-v1")
 
 
 @lru_cache(maxsize=1)

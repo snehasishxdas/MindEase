@@ -36,16 +36,61 @@ model QuizScore {
 }
 
 model JournalEntry {
-  id              String   @id @default(uuid()) @db.Uuid
-  clientId        String   @map("client_id")
-  title           String
-  content         String
-  tags            Json?
-  sentimentLabel  String?  @map("sentiment_label")
-  sentimentScore  Float?   @map("sentiment_score")
-  sentimentModel  String?  @map("sentiment_model")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid()) @db.Uuid
+  clientId       String   @map("client_id")
+  title          String
+  content        String
+  tags           Json?
+  sentimentLabel String?  @map("sentiment_label")
+  sentimentScore Float?   @map("sentiment_score")
+  sentimentModel String?  @map("sentiment_model")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@index([clientId, createdAt])
   @@map("journal_entries")
+}
+
+model MoodCheckin {
+  id        String   @id @default(uuid()) @db.Uuid
+  clientId  String   @map("client_id")
+  score     Int
+  label     String
+  tags      Json?
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([clientId, createdAt])
+  @@map("mood_checkins")
+}
+
+model CounsellorBooking {
+  id             String   @id @default(uuid()) @db.Uuid
+  clientId       String   @map("client_id")
+  counsellorId   String   @map("counsellor_id")
+  counsellorName String   @map("counsellor_name")
+  role           String
+  location       String
+  bookingDate    String   @map("booking_date")
+  bookingTime    String   @map("booking_time")
+  mode           String
+  note           String?
+  status         String   @default("confirmed")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([clientId, createdAt])
+  @@map("counsellor_bookings")
+}
+
+model PeerMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @map("room_id")
+  clientId  String   @map("client_id")
+  author    String
+  content   String
+  likes     Int      @default(0)
+  flagged   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([roomId, createdAt])
+  @@map("peer_messages")
 }

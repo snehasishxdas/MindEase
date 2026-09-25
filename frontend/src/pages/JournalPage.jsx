@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Bookmark, Lock, Trash2, Search } from 'lucide-react';
+import { apiRequest, clientId } from '../api';
 
 const PROMPTS = [
   "What gave you a tiny spark of peace today?",
@@ -9,13 +10,7 @@ const PROMPTS = [
 ];
 
 export default function JournalPage() {
-  const [entries, setEntries] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('mindease_journals')) || [];
-    } catch {
-      return [];
-    }
-  });
+  const [entries, setEntries] = useState([]);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -27,8 +22,18 @@ export default function JournalPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('mindease_journals', JSON.stringify(entries));
-  }, [entries]);
+    apiRequest(`/api/journals?client_id=${encodeURIComponent(clientId())}`)
+      .then(rows => setEntries(rows.map(row => ({
+        ...row,
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        tags: row.tags || [],
+        sentimentTone: row.sentiment_label || 'Reflective',
+        sentimentScore: row.sentiment_score,
+        timestamp: row.created_at,
+      })))).catch(() => setEntries([]));
+  }, []);
 
   useEffect(() => {
     const text = content.trim();
@@ -68,23 +73,23 @@ export default function JournalPage() {
     };
   }, [content]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!content.trim()) {
       alert('Please write your thoughts before saving.');
       return;
     }
 
-    const newEntry = {
-      id: Date.now(),
-      title: title.trim() || 'Daily Reflection',
-      content: content.trim(),
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      sentimentTone: sentimentTone || 'Reflective',
-      sentimentScore,
-      timestamp: new Date().toISOString()
-    };
-
-    setEntries(prev => [newEntry, ...prev]);
+    try {
+      const saved = await apiRequest('/api/journals', { method: 'POST', body: JSON.stringify({
+        client_id: clientId(), title: title.trim() || 'Daily Reflection', content: content.trim(),
+        tags: tags.split(',').map(t => t.trim()).filter(Boolean), sentimentLabel: sentimentTone || 'Reflective',
+        sentimentScore, sentimentModel: 'syedkhalid0/RoBERTa-Sentimental-Analysis-v1'
+      })});
+      setEntries(prev => [{ ...saved, id: saved.id, tags: saved.tags || [], sentimentTone: saved.sentiment_label, timestamp: saved.created_at }, ...prev]);
+    } catch {
+      alert('The journal entry could not be saved. Please try again.');
+      return;
+    }
 
     setTitle('');
     setContent('');
@@ -93,8 +98,13 @@ export default function JournalPage() {
     setSentimentScore(null);
   };
 
-  const handleDelete = (id) => {
-    setEntries(prev => prev.filter(e => e.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      await apiRequest(`/api/journals?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      setEntries(prev => prev.filter(e => e.id !== id));
+    } catch {
+      alert('The journal entry could not be deleted.');
+    }
   };
 
   const filtered = entries.filter(e => 

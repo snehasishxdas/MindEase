@@ -5,12 +5,19 @@ from dotenv import load_dotenv
 from groq_client import ask_groq
 from superbase_client import log_vent, log_resilience, log_quiz_score
 from sentiment import analyze_sentiment
+from database import connection, create_booking, create_journal, create_mood, create_peer_message, fetch_all
 
 load_dotenv()
 
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 app = Flask(__name__, template_folder=frontend_dir, static_folder=os.path.join(frontend_dir, "static"))
 CORS(app)
+
+
+def serialize_row(row):
+    if not row:
+        return row
+    return {key: value.isoformat() if hasattr(value, "isoformat") else value for key, value in row.items()}
 
 # ─── System Prompts ────────────────────────────────────────────────────────────
 
@@ -99,6 +106,90 @@ def sentiment():
     except Exception as e:
         print(f"[Sentiment API Error] {e}")
         return jsonify({"error": "Sentiment analysis is temporarily unavailable."}), 503
+
+
+@app.route("/api/moods", methods=["GET", "POST"])
+def moods():
+    if request.method == "GET":
+        client_id = request.args.get("client_id", "").strip()
+        if not client_id:
+            return jsonify({"error": "client_id is required"}), 400
+        rows = fetch_all(
+            "SELECT id, score, label, tags, note, created_at FROM mood_checkins WHERE client_id = %s ORDER BY created_at DESC",
+            (client_id,),
+        )
+        return jsonify([serialize_row(row) for row in rows])
+
+    data = request.get_json() or {}
+    required = ("client_id", "score", "label")
+    if any(not data.get(field) for field in required):
+        return jsonify({"error": "client_id, score, and label are required"}), 400
+    try:
+        return jsonify(serialize_row(create_mood(data["client_id"], data["score"], data["label"], data.get("tags"), data.get("note")))), 201
+    except Exception as e:
+        print(f"[Mood API Error] {e}")
+        return jsonify({"error": "Mood check-in could not be saved."}), 503
+
+
+@app.route("/api/journals", methods=["GET", "POST", "DELETE"])
+def journals():
+    if request.method == "DELETE":
+        entry_id = request.args.get("id", "").strip()
+        with connection() as conn, conn.cursor() as cursor:
+            cursor.execute("DELETE FROM journal_entries WHERE id = %s", (entry_id,))
+        return jsonify({"ok": True})
+    if request.method == "GET":
+        client_id = request.args.get("client_id", "").strip()
+        if not client_id:
+            return jsonify({"error": "client_id is required"}), 400
+        rows = fetch_all("SELECT * FROM journal_entries WHERE client_id = %s ORDER BY created_at DESC", (client_id,))
+        return jsonify([serialize_row(row) for row in rows])
+
+    data = request.get_json() or {}
+    if not data.get("client_id") or not data.get("content", "").strip():
+        return jsonify({"error": "client_id and content are required"}), 400
+    try:
+        result = create_journal(data["client_id"], data.get("title") or "Daily Reflection", data["content"].strip(),
+                                data.get("tags"), data.get("sentimentLabel"), data.get("sentimentScore"), data.get("sentimentModel"))
+        return jsonify(serialize_row(result)), 201
+    except Exception as e:
+        print(f"[Journal API Error] {e}")
+        return jsonify({"error": "Journal entry could not be saved."}), 503
+
+
+@app.route("/api/bookings", methods=["GET", "POST", "DELETE"])
+def bookings():
+    if request.method == "GET":
+        client_id = request.args.get("client_id", "").strip()
+        rows = fetch_all("SELECT * FROM counsellor_bookings WHERE client_id = %s ORDER BY created_at DESC", (client_id,))
+        return jsonify([serialize_row(row) for row in rows])
+    if request.method == "DELETE":
+        booking_id = request.args.get("id", "").strip()
+        with connection() as conn, conn.cursor() as cursor:
+            cursor.execute("UPDATE counsellor_bookings SET status = 'cancelled' WHERE id = %s", (booking_id,))
+        return jsonify({"ok": True})
+    data = request.get_json() or {}
+    try:
+        return jsonify(serialize_row(create_booking(data["client_id"], data))), 201
+    except Exception as e:
+        print(f"[Booking API Error] {e}")
+        return jsonify({"error": "Booking could not be saved."}), 503
+
+
+@app.route("/api/peer-messages", methods=["GET", "POST"])
+def peer_messages():
+    if request.method == "GET":
+        room_id = request.args.get("room_id", "").strip()
+        rows = fetch_all("SELECT * FROM peer_messages WHERE room_id = %s ORDER BY created_at DESC LIMIT 100", (room_id,))
+        return jsonify([serialize_row(row) for row in rows])
+    data = request.get_json() or {}
+    if not all(data.get(field) for field in ("roomId", "clientId", "author", "content")):
+        return jsonify({"error": "roomId, clientId, author, and content are required"}), 400
+    try:
+        return jsonify(serialize_row(create_peer_message(data["roomId"], data["clientId"], data["author"], data["content"].strip()))), 201
+    except Exception as e:
+        print(f"[Peer API Error] {e}")
+        return jsonify({"error": "Peer message could not be saved."}), 503
 
 
 # ─── Run ───────────────────────────────────────────────────────────────────────

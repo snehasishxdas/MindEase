@@ -14,6 +14,7 @@ import {
   Trash2,
   Sparkles
 } from 'lucide-react';
+import { apiRequest, clientId } from '../api';
 
 const COUNSELLORS = [
   {
@@ -62,16 +63,17 @@ export default function CounsellorPage() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [lastBooked, setLastBooked] = useState(null);
 
-  // Load existing bookings from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('mindease_counsellor_bookings');
-    if (saved) {
-      try {
-        setBookings(JSON.parse(saved));
-      } catch (e) {
-        setBookings([]);
-      }
-    }
+    apiRequest(`/api/bookings?client_id=${encodeURIComponent(clientId())}`)
+      .then(rows => setBookings(rows.map(row => ({
+        ...row,
+        id: row.id,
+        counsellorId: row.counsellor_id,
+        counsellorName: row.counsellor_name,
+        date: row.booking_date,
+        time: row.booking_time,
+        bookedAt: row.created_at,
+      })))).catch(() => setBookings([]));
   }, []);
 
   const openBookingModal = (counsellor) => {
@@ -84,12 +86,11 @@ export default function CounsellorPage() {
     setStudentNote('');
   };
 
-  const handleConfirmBooking = (e) => {
+  const handleConfirmBooking = async (e) => {
     e.preventDefault();
     if (!selectedCounsellor || !selectedSlot) return;
 
-    const newBooking = {
-      id: 'BK-' + Date.now().toString().slice(-6),
+    const booking = {
       counsellorId: selectedCounsellor.id,
       counsellorName: selectedCounsellor.name,
       role: selectedCounsellor.role,
@@ -98,12 +99,18 @@ export default function CounsellorPage() {
       time: selectedSlot,
       mode: bookingMode,
       note: studentNote.trim(),
-      bookedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      client_id: clientId(),
     };
 
-    const updated = [newBooking, ...bookings];
-    setBookings(updated);
-    localStorage.setItem('mindease_counsellor_bookings', JSON.stringify(updated));
+    let newBooking;
+    try {
+      const saved = await apiRequest('/api/bookings', { method: 'POST', body: JSON.stringify({ client_id: clientId(), ...booking }) });
+      newBooking = { ...booking, ...saved, id: saved.id, bookedAt: saved.created_at };
+      setBookings(prev => [newBooking, ...prev]);
+    } catch {
+      alert('The appointment could not be booked. Please try again.');
+      return;
+    }
 
     setLastBooked(newBooking);
     setSelectedCounsellor(null);
@@ -111,11 +118,14 @@ export default function CounsellorPage() {
     setIsSuccessModalOpen(true);
   };
 
-  const cancelBooking = (id) => {
+  const cancelBooking = async (id) => {
     if (window.confirm('Are you sure you want to cancel this confidential appointment?')) {
-      const updated = bookings.filter(b => b.id !== id);
-      setBookings(updated);
-      localStorage.setItem('mindease_counsellor_bookings', JSON.stringify(updated));
+      try {
+        await apiRequest(`/api/bookings?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        setBookings(prev => prev.filter(b => b.id !== id));
+      } catch {
+        alert('The appointment could not be cancelled.');
+      }
     }
   };
 

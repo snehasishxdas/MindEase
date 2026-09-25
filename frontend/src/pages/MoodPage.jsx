@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Smile, Check } from 'lucide-react';
+import { apiRequest, clientId } from '../api';
 
 const MOODS = [
   { score: 5, label: 'Thriving', emoji: '🌟' },
@@ -16,39 +17,34 @@ export default function MoodPage() {
   const [selectedLabel, setSelectedLabel] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [note, setNote] = useState('');
-  const [moods, setMoods] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('mindease_moods')) || [];
-    } catch {
-      return [];
-    }
-  });
+  const [moods, setMoods] = useState([]);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('mindease_moods', JSON.stringify(moods));
-  }, [moods]);
+    apiRequest(`/api/moods?client_id=${encodeURIComponent(clientId())}`)
+      .then(rows => setMoods(rows.map(row => ({ ...row, timestamp: row.created_at }))))
+      .catch(() => setMoods([]));
+  }, []);
 
   const toggleTag = (tag) => {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedScore) {
       alert('Please select your mood rating above first.');
       return;
     }
 
-    const newEntry = {
-      id: Date.now(),
-      score: selectedScore,
-      label: selectedLabel,
-      tags: selectedTags,
-      note: note.trim(),
-      timestamp: new Date().toISOString()
-    };
-
-    setMoods(prev => [newEntry, ...prev]);
+    try {
+      const saved = await apiRequest('/api/moods', { method: 'POST', body: JSON.stringify({
+        client_id: clientId(), score: selectedScore, label: selectedLabel, tags: selectedTags, note: note.trim()
+      })});
+      setMoods(prev => [{ ...saved, timestamp: saved.created_at }, ...prev]);
+    } catch {
+      alert('The check-in could not be saved. Please try again.');
+      return;
+    }
 
     // Reset
     setSelectedScore(null);
@@ -79,7 +75,7 @@ export default function MoodPage() {
       <div className="section-label">Feature 1: Daily Mood Check-In</div>
       <h2 className="section-title">How are you feeling today? 🌸</h2>
       <p className="section-subtitle">
-        Check in with yourself in 10 seconds. Your records are saved strictly on your device to help you understand your emotional patterns over time.
+        Check in with yourself in 10 seconds. Your records are stored securely under your anonymous client ID so your emotional patterns are available across sessions.
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>

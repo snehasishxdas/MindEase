@@ -1,7 +1,21 @@
-{ "name": "my-app", "version": "1.0.0", "dependencies": {
-  "flask": "^2.0.1",
-  "flask-cors": "^3.0.10",
-  "groq": "^0.1.0",
-  "supabase": "^2.0.0",
-  "python-dotenv": "^0.19.0"
-} }
+{
+  "name": "mindease",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MindEase - Student Mental Wellness Web Companion",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.0"
+  }
+}

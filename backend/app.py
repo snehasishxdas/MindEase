@@ -7,7 +7,8 @@ from superbase_client import log_vent, log_resilience, log_quiz_score
 
 load_dotenv()
 
-app = Flask(__name__, template_folder="template")
+frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+app = Flask(__name__, template_folder=frontend_dir, static_folder=os.path.join(frontend_dir, "static"))
 CORS(app)
 
 # ─── System Prompts ────────────────────────────────────────────────────────────

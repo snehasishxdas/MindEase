@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MindMirror — Your Space to Breathe, Reflect & Grow</title>
+  <meta name="description" content="MindMirror is an AI-powered student mental wellness tool. Vent your feelings, test your mental health knowledge, and build resilience through compassionate AI support." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="../static/style.css" />
+</head>
+<body>
+
+  <!-- ── Background Blobs ────────────────────────────────────── -->
+  <div class="blob-container" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="blob blob-4"></div>
+  </div>
+
+  <div class="app-layout">
+
+    <!-- ══════════════════════════════════════════════════════════
+         SIDEBAR
+         ══════════════════════════════════════════════════════════ -->
+    <aside class="sidebar" role="navigation" aria-label="Section navigation">
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <i data-lucide="sparkles"></i>
+        </div>
+      </div>
+
+      <!-- Nav buttons -->
+      <nav class="nav-group">
+        <button class="nav-btn active" data-target="#home" aria-label="Home section" id="nav-home">
+          <i data-lucide="home"></i>
+          <span>Home</span>
+        </button>
+
+        <button class="nav-btn" data-target="#vent" aria-label="Vent section" id="nav-vent">
+          <i data-lucide="message-circle"></i>
+          <span>Vent</span>
+        </button>
+
+        <button class="nav-btn" data-target="#quiz" aria-label="Quiz section" id="nav-quiz">
+          <i data-lucide="brain"></i>
+          <span>Quiz</span>
+        </button>
+
+        <button class="nav-btn" data-target="#resilience" aria-label="Resilience section" id="nav-resilience">
+          <i data-lucide="shield"></i>
+          <span>Grow</span>
+        </button>
+
+        <button class="nav-btn" data-target="#breathe" aria-label="Breathe section" id="nav-breathe">
+          <i data-lucide="wind"></i>
+          <span>Breathe</span>
+        </button>
+
+        <button class="nav-btn" data-target="#affirmations" aria-label="Affirmations section" id="nav-affirmations">
+          <i data-lucide="sun"></i>
+          <span>Affirm</span>
+        </button>
+
+        <button class="nav-btn" data-target="#crisis" aria-label="Crisis Resources section" id="nav-crisis">
+          <i data-lucide="phone-call"></i>
+          <span>Help</span>
+        </button>
+
+        <button class="nav-btn" data-target="#planner" aria-label="Academic Planner section" id="nav-planner">
+          <i data-lucide="calendar"></i>
+          <span>Plan</span>
+        </button>
+
+        <button class="nav-btn" data-target="#sounds" aria-label="Soundscapes section" id="nav-sounds">
+          <i data-lucide="music"></i>
+          <span>Sounds</span>
+        </button>
+      </nav>
+
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════════
+         MAIN CONTENT
+         ══════════════════════════════════════════════════════════ -->
+    <main class="main-content">
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 1 — HOME
+           ──────────────────────────────────────────────────────── -->
+      <section id="home" class="section">
+
+        <div class="home-header">
+          <div class="section-label">Welcome</div>
+
+          <h1 class="home-tagline">
+            <span class="highlight">MindMirror</span><br />
+            Your space to breathe,<br />reflect, and grow.
+          </h1>
+
+          <p class="home-sub">
+            MindMirror is your compassionate AI companion built for students.
+            Whether you're burnt out, curious about mental health, or building
+            emotional resilience — you're in the right place. No judgement, just support.
+          </p>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <span class="badge badge-lavender">
+              <i data-lucide="sparkles" style="width:13px;height:13px;"></i>
+              Powered by LLaMA 3
+            </span>
+            <span class="badge badge-mint">
+              <i data-lucide="lock" style="width:13px;height:13px;"></i>
+              Anonymous & Private
+            </span>
+          </div>
+        </div>
+
+        <!-- Feature Cards -->
+        <div class="feature-cards">
+
+          <div class="feature-card vent glass-card" data-target="#vent" role="button" tabindex="0" aria-label="Go to Vent section">
+            <div class="feature-icon-wrap">
+              <i data-lucide="message-circle"></i>
+            </div>
+            <h3>Vent &amp; Reflect</h3>
+            <p>Share what's weighing on you. Our AI gently analyses your feelings and offers warm, practical coping strategies.</p>
+            <div class="feature-card-arrow">
+              <i data-lucide="arrow-right"></i>
+            </div>
+          </div>
+
+          <div class="feature-card quiz glass-card" data-target="#quiz" role="button" tabindex="0" aria-label="Go to Quiz section">
+            <div class="feature-icon-wrap">
+              <i data-lucide="brain"></i>
+            </div>
+            <h3>Mental Health Quiz</h3>
+            <p>Test and grow your mental health literacy through thoughtfully crafted questions about student wellness.</p>
+            <div class="feature-card-arrow">
+              <i data-lucide="arrow-right"></i>
+            </div>
+          </div>
+
+          <div class="feature-card resilience glass-card" data-target="#resilience" role="button" tabindex="0" aria-label="Go to Resilience section">
+            <div class="feature-icon-wrap">
+              <i data-lucide="shield"></i>
+            </div>
+            <h3>Resilience Trainer</h3>
+            <p>Practise navigating tough social and academic situations. Get AI coaching on boundary-setting and assertiveness.</p>
+            <div class="feature-card-arrow">
+              <i data-lucide="arrow-right"></i>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 2 — VENT & BURNOUT DETECTOR
+           ──────────────────────────────────────────────────────── -->
+      <section id="vent" class="section">
+
+        <div class="vent-container">
+          <div class="section-label">Burnout Detector</div>
+
+          <h2 class="section-title">Let it out 🌸</h2>
+          <p class="section-subtitle">
+            This is a safe space. Write freely about what's been on your mind —
+            stress, pressure, confusion, or anything at all. Our AI will
+            acknowledge your feelings and offer gentle, personalised coping suggestions.
+          </p>
+
+          <div class="glass-card mt-24" style="padding: 32px;">
+            <textarea
+              id="vent-textarea"
+              class="styled-textarea"
+              placeholder="What's been on your mind lately? Write freely..."
+              rows="7"
+              aria-label="Vent textarea"
+            ></textarea>
+
+            <div class="char-count" id="vent-char-count">0 / 1000</div>
+
+            <div style="margin-top: 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <button id="vent-submit" class="btn-primary" aria-label="Analyse my feelings">
+                <i data-lucide="sparkles" style="width:18px;height:18px;"></i>
+                Analyse My Feelings
+              </button>
+
+              <div class="loader" id="vent-loader" aria-live="polite">
+                <div class="spinner"></div>
+                <span>Your AI companion is reflecting...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Response -->
+          <div class="ai-response-box" id="vent-response" role="region" aria-label="AI response" aria-live="polite">
+            <div class="ai-response-header">
+              <i data-lucide="heart"></i>
+              <span>MindMirror Response</span>
+            </div>
+            <div id="vent-response-text"></div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 3 — QUIZ
+           ──────────────────────────────────────────────────────── -->
+      <section id="quiz" class="section">
+
+        <div class="quiz-container">
+          <div class="section-label">Mental Health Literacy</div>
+
+          <h2 class="section-title">Test Your Knowledge 🧩</h2>
+          <p class="section-subtitle">
+            How well do you understand student mental health? Work through these
+            questions to discover your awareness — and learn something new along the way.
+          </p>
+
+          <!-- Progress Bar -->
+          <div class="quiz-progress mt-24">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+            <span class="progress-label" id="progress-label">1 / 8</span>
+          </div>
+
+          <!-- Question Card -->
+          <div class="quiz-card" id="quiz-card">
+            <p class="quiz-question" id="quiz-question-text"></p>
+            <div class="quiz-options" id="quiz-options" role="radiogroup" aria-label="Answer options"></div>
+            <div class="quiz-nav">
+              <button id="quiz-next" class="btn-primary">Next →</button>
+            </div>
+          </div>
+
+          <!-- Score Screen -->
+          <div class="quiz-card score-screen" id="score-screen">
+            <div class="score-circle">
+              <div class="score-number" id="score-number">0</div>
+              <div class="score-total" id="score-total">/ 8</div>
+            </div>
+            <div class="score-message" id="score-message"></div>
+            <div class="score-sub" id="score-sub"></div>
+            <button id="quiz-retry" class="btn-primary">
+              <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
+              Try Again
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 4 — RESILIENCE ROLEPLAY TRAINER
+           ──────────────────────────────────────────────────────── -->
+      <section id="resilience" class="section">
+
+        <div class="resilience-container">
+          <div class="section-label">Roleplay Trainer</div>
+
+          <h2 class="section-title">Build Your Resilience 🌱</h2>
+          <p class="section-subtitle">
+            Choose a real-life scenario students face, write how you would respond,
+            and receive personalised AI coaching on boundary-setting, assertiveness,
+            and self-care. There are no wrong answers — only growth.
+          </p>
+
+          <!-- Scenario Grid (populated by JS) -->
+          <div class="scenario-grid mt-24" id="scenario-grid"></div>
+
+          <!-- Response Form (hidden until scenario selected) -->
+          <div id="resilience-form" class="resilience-form glass-card" style="display:none; padding:28px;">
+            <p id="selected-scenario-title" style="font-size:0.85rem; color:var(--text-light); margin-bottom:16px; font-style:italic;"></p>
+
+            <label for="resilience-textarea">How would you respond in this situation?</label>
+            <textarea
+              id="resilience-textarea"
+              class="styled-textarea"
+              placeholder="Write your response here — be as honest as you'd like..."
+              rows="6"
+              aria-label="Resilience response textarea"
+            ></textarea>
+
+            <div style="margin-top: 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <button id="resilience-submit" class="btn-primary" aria-label="Get feedback">
+                <i data-lucide="zap" style="width:18px;height:18px;"></i>
+                Get Feedback
+              </button>
+
+              <div class="loader" id="resilience-loader" aria-live="polite">
+                <div class="spinner"></div>
+                <span>Coaching in progress...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Response -->
+          <div class="ai-response-box" id="resilience-response" role="region" aria-label="AI resilience feedback" aria-live="polite">
+            <div class="ai-response-header">
+              <i data-lucide="shield"></i>
+              <span>Resilience Coach</span>
+            </div>
+            <div id="resilience-response-text"></div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 5 — BREATHE & GROUND
+           ──────────────────────────────────────────────────────── -->
+      <section id="breathe" class="section">
+        <div class="breathe-container">
+          <div class="section-label">Calm Your Mind</div>
+          <h2 class="section-title">Breathe &amp; Ground 🌬️</h2>
+
+          <!-- Mode Toggle -->
+          <div class="breathe-toggle-wrap">
+            <button id="mode-breathe-btn" class="toggle-pill active" aria-pressed="true">Breathing Exercise</button>
+            <button id="mode-ground-btn" class="toggle-pill" aria-pressed="false">Switch to Grounding</button>
+          </div>
+
+          <!-- Breathing Mode -->
+          <div id="breathe-mode" class="breathe-mode">
+            <!-- Particle Background -->
+            <div class="particle-container" id="particle-container" aria-hidden="true"></div>
+
+            <div class="breathe-orb-wrap">
+              <div class="breathe-ripple" id="breathe-ripple"></div>
+              <div class="breathe-orb" id="breathe-orb">
+                <span class="breathe-phase" id="breathe-phase">Inhale</span>
+                <span class="breathe-count" id="breathe-count">4</span>
+              </div>
+            </div>
+
+            <p class="breathe-instruction" id="breathe-instruction">Breathe in slowly through your nose...</p>
+
+            <div class="breathe-controls">
+              <button id="breathe-start" class="btn-primary" aria-label="Start breathing exercise">
+                <i data-lucide="play" style="width:16px;height:16px;"></i>
+                Start
+              </button>
+            </div>
+          </div>
+
+          <!-- Grounding Mode -->
+          <div id="ground-mode" class="ground-mode" style="display:none;">
+            <div class="ground-progress-bar">
+              <div class="ground-progress-fill" id="ground-progress-fill" style="width:0%"></div>
+            </div>
+
+            <div class="ground-steps" id="ground-steps">
+              <!-- Steps injected by JS -->
+            </div>
+
+            <button id="ground-cta" class="btn-cta-calm" style="display:none;" aria-label="Completed grounding">
+              I feel calmer now ✦
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 6 — AFFIRMATION OF THE DAY
+           ──────────────────────────────────────────────────────── -->
+      <section id="affirmations" class="section affirmations-section">
+        <!-- Aurora background -->
+        <div class="aurora-bg" aria-hidden="true">
+          <div class="aurora aurora-1"></div>
+          <div class="aurora aurora-2"></div>
+          <div class="aurora aurora-3"></div>
+        </div>
+
+        <div class="affirmation-container">
+          <div class="affirmation-card glass-card" id="affirmation-card">
+            <div class="affirmation-icon" id="affirmation-icon">☀️</div>
+            <blockquote class="affirmation-quote" id="affirmation-quote"></blockquote>
+            <div class="affirmation-meta">
+              <span class="affirmation-date" id="affirmation-date"></span>
+              <button class="affirmation-shuffle" id="shuffle-btn" aria-label="New affirmation">
+                <i data-lucide="shuffle" style="width:16px;height:16px;"></i>
+              </button>
+            </div>
+          </div>
+          <div class="affirmation-actions">
+            <button class="btn-pill" id="save-affirmation" aria-label="Save to Journal">
+              <i data-lucide="bookmark" style="width:16px;height:16px;"></i>
+              Save to Journal
+            </button>
+            <button class="btn-pill btn-pill-outline" id="share-affirmation" aria-label="Share affirmation">
+              <i data-lucide="share-2" style="width:16px;height:16px;"></i>
+              Share
+            </button>
+          </div>
+          <div class="saved-toast" id="saved-toast">Saved to your journal ✓</div>
+        </div>
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 7 — CRISIS RESOURCES
+           ──────────────────────────────────────────────────────── -->
+      <section id="crisis" class="section crisis-section">
+        <div class="crisis-container">
+          <div class="crisis-header">
+            <div class="section-label crisis-label">You Are Not Alone</div>
+            <h2 class="section-title crisis-title">Reach Out &amp; Get Help 💛</h2>
+            <p class="section-subtitle">If you're in distress, please reach out to one of these trusted Indian mental health support lines. Help is always available.</p>
+          </div>
+
+          <!-- Emergency CTA -->
+          <a href="tel:9152987821" class="crisis-emergency-btn" id="crisis-emergency-btn" aria-label="Emergency call iCall">
+            <div class="pulse-ring"></div>
+            <i data-lucide="phone" style="width:22px;height:22px;"></i>
+            Call Now — iCall: 9152987821
+          </a>
+
+          <!-- Helpline Cards -->
+          <div class="helpline-grid" id="helpline-grid">
+            <!-- Injected by JS -->
+          </div>
+
+          <!-- Chat Resources -->
+          <div class="crisis-chat-section">
+            <h3 class="crisis-subtitle">Online Chat Resources</h3>
+            <div class="crisis-chat-links">
+              <a href="https://icallhelpline.org" target="_blank" rel="noopener" class="chat-link-card">
+                <i data-lucide="message-square" style="width:18px;height:18px;"></i>
+                iCall Online Chat
+              </a>
+              <a href="https://www.vandrevalafoundation.com" target="_blank" rel="noopener" class="chat-link-card">
+                <i data-lucide="heart" style="width:18px;height:18px;"></i>
+                Vandrevala Foundation
+              </a>
+              <a href="https://nimhans.ac.in" target="_blank" rel="noopener" class="chat-link-card">
+                <i data-lucide="building-2" style="width:18px;height:18px;"></i>
+                NIMHANS Resources
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 8 — ACADEMIC STRESS MAPPER
+           ──────────────────────────────────────────────────────── -->
+      <section id="planner" class="section planner-section">
+        <div class="planner-container">
+          <div class="section-label">AI-Powered</div>
+          <h2 class="section-title">Academic Stress Mapper 📅</h2>
+          <p class="section-subtitle">Add your upcoming exams and deadlines, and let AI predict your stress peaks for the week ahead.</p>
+
+          <!-- Weekly Calendar Strip -->
+          <div class="weekly-strip" id="weekly-strip">
+            <!-- Days injected by JS -->
+          </div>
+
+          <!-- Deadline Cards -->
+          <div class="deadlines-section">
+            <div class="deadlines-header">
+              <h3 class="deadlines-title">Upcoming Deadlines</h3>
+              <button class="btn-add-floating" id="add-deadline-btn" aria-label="Add new deadline">
+                <i data-lucide="plus" style="width:18px;height:18px;"></i>
+                Add
+              </button>
+            </div>
+            <div class="deadlines-list" id="deadlines-list">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+
+          <!-- Stress Forecast Graph -->
+          <div class="stress-forecast-card glass-card">
+            <h3 class="forecast-title">Your Stress Forecast</h3>
+            <div class="forecast-graph" id="forecast-graph">
+              <!-- SVG graph injected by JS -->
+            </div>
+          </div>
+
+          <!-- Add Deadline Modal -->
+          <div class="modal-overlay" id="deadline-modal" role="dialog" aria-modal="true" aria-label="Add deadline">
+            <div class="modal-card glass-card">
+              <h3 class="modal-title">Add Exam / Assignment</h3>
+              <div class="modal-fields">
+                <input type="text" id="deadline-title" class="modal-input" placeholder="Subject or Task name" aria-label="Title" />
+                <input type="date" id="deadline-date" class="modal-input" placeholder="Due Date" aria-label="Due date" />
+                <select id="deadline-type" class="modal-input" aria-label="Type">
+                  <option value="exam">📝 Exam</option>
+                  <option value="assignment">📌 Assignment</option>
+                  <option value="project">🗂️ Project</option>
+                </select>
+                <select id="deadline-urgency" class="modal-input" aria-label="Urgency">
+                  <option value="high">🔴 High Urgency</option>
+                  <option value="medium">🟡 Medium Urgency</option>
+                  <option value="low">🟢 Low Urgency</option>
+                </select>
+              </div>
+              <div class="modal-actions">
+                <button class="btn-primary" id="modal-save" aria-label="Save deadline">Save Deadline</button>
+                <button class="btn-ghost" id="modal-cancel" aria-label="Cancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ────────────────────────────────────────────────────────
+           SECTION 9 — CALMING SOUNDSCAPES
+           ──────────────────────────────────────────────────────── -->
+      <section id="sounds" class="section sounds-section">
+        <div class="sounds-container">
+          <div class="section-label">Ambient Sounds</div>
+          <h2 class="section-title">Calming Soundscapes 🎵</h2>
+          <p class="section-subtitle">Find your perfect sound for focus, rest, or relaxation.</p>
+
+          <!-- Sound Tiles -->
+          <div class="sound-tiles" id="sound-tiles">
+            <!-- Injected by JS -->
+          </div>
+
+          <!-- Now Playing Bar -->
+          <div class="now-playing-bar glass-card" id="now-playing-bar" style="display:none;">
+            <div class="now-playing-info">
+              <div class="equalizer" id="equalizer" aria-label="Playing">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <span class="now-playing-name" id="now-playing-name">Rain</span>
+            </div>
+            <div class="sound-controls">
+              <div class="volume-control">
+                <i data-lucide="volume-2" style="width:16px;height:16px;"></i>
+                <input type="range" id="volume-slider" min="0" max="100" value="70" class="volume-slider" aria-label="Volume" />
+              </div>
+              <div class="timer-pills">
+                <button class="timer-pill" data-mins="15">15m</button>
+                <button class="timer-pill" data-mins="30">30m</button>
+                <button class="timer-pill" data-mins="60">60m</button>
+              </div>
+              <button class="mix-toggle" id="mix-toggle" aria-pressed="false">
+                <i data-lucide="layers" style="width:14px;height:14px;"></i>
+                Mix
+              </button>
+              <button class="stop-btn" id="stop-sound" aria-label="Stop">
+                <i data-lucide="square" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Init Lucide icons
+    lucide.createIcons();
+  </script>
+  <script src="../static/script.js"></script>
+  <script>
+    // Re-init icons after dynamic content loads (scenario cards etc.)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Small delay to let JS render dynamic scenario cards first
+      setTimeout(() => lucide.createIcons(), 50);
+    });
+  </script>
+
+</body>
+</html>

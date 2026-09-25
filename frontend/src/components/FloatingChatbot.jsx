@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Bot, X, Send, AlertTriangle, PhoneCall } from 'lucide-react';
+import { Sparkles, X, Send, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
 const CRISIS_KEYWORDS = [
   'kill myself', 'suicide', 'end my life', 'harm myself', 'want to die', 
@@ -18,15 +18,34 @@ export default function FloatingChatbot({ onOpenCrisis }) {
   const [inputText, setInputText] = useState('');
   const [isCrisisTriggered, setIsCrisisTriggered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceSupported, setVoiceSupported] = useState(true);
+  const [voiceStatus, setVoiceStatus] = useState('');
   const endRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const shouldListenRef = useRef(false);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    const query = inputText.trim();
+  const speak = (text) => {
+    if (!voiceEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.96;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const addAssistantMessage = (message) => {
+    setMessages(prev => [...prev, message]);
+    speak(message.text);
+  };
+
+  const sendMessage = async (rawText) => {
+    const query = rawText.trim();
     if (!query || isLoading) return;
 
     const userMsg = { id: Date.now().toString(), role: 'user', text: query };
@@ -45,7 +64,7 @@ export default function FloatingChatbot({ onOpenCrisis }) {
         isCrisisAlert: true,
         text: "I hear how deeply difficult things feel right now. Your safety and life matter. Because I am an AI, I cannot provide emergency care. Please dial Tele-MANAS (14416) or our campus emergency desk right now. Trained human professionals are ready to listen 24/7."
       };
-      setMessages(prev => [...prev, crisisReply]);
+      addAssistantMessage(crisisReply);
       return;
     }
 
@@ -60,12 +79,13 @@ export default function FloatingChatbot({ onOpenCrisis }) {
       });
       if (res.ok) {
         const data = await res.json();
-        setMessages(prev => [...prev, {
+        addAssistantMessage({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           text: data.response
-        }]);
+        });
         setIsLoading(false);
+        if (shouldListenRef.current) startListening();
         return;
       }
     } catch {}
@@ -78,14 +98,85 @@ export default function FloatingChatbot({ onOpenCrisis }) {
       } else if (lower.includes('sleep')) {
         reply = "When your mind is racing at night, pushing yourself to sleep often increases anxiety. Try our procedural rain or ocean soundscapes in the Self-Help Hub to ease your mind.";
       }
-      setMessages(prev => [...prev, {
+      addAssistantMessage({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         text: reply
-      }]);
+      });
       setIsLoading(false);
+      if (shouldListenRef.current) startListening();
     }, 600);
   };
+
+  const handleSend = (e) => {
+    e.preventDefault();
+    const query = inputText.trim();
+    setInputText('');
+    sendMessage(query);
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceSupported(false);
+      setVoiceStatus('Voice input is not supported in this browser.');
+      return;
+    }
+
+    if (recognitionRef.current) recognitionRef.current.abort();
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceStatus('Listening...');
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInputText(transcript);
+      shouldListenRef.current = false;
+      setIsListening(false);
+      setVoiceStatus('');
+      sendMessage(transcript);
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      shouldListenRef.current = false;
+      setVoiceStatus(event.error === 'not-allowed' ? 'Microphone permission is required.' : 'Voice input stopped.');
+    };
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    shouldListenRef.current = true;
+    recognition.start();
+  };
+
+  const stopListening = () => {
+    shouldListenRef.current = false;
+    recognitionRef.current?.stop();
+    setIsListening(false);
+    setVoiceStatus('');
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      shouldListenRef.current = false;
+      recognitionRef.current?.stop();
+      window.speechSynthesis?.cancel();
+      return undefined;
+    }
+
+    if (voiceEnabled) startListening();
+    return () => {
+      shouldListenRef.current = false;
+      recognitionRef.current?.stop();
+    };
+  }, [isOpen, voiceEnabled]);
+
+  useEffect(() => () => {
+    recognitionRef.current?.stop();
+    window.speechSynthesis?.cancel();
+  }, []);
 
   return (
     <>
@@ -118,6 +209,20 @@ export default function FloatingChatbot({ onOpenCrisis }) {
             >
               ✕
             </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 14px', borderBottom: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.55)' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-mid)' }}>{voiceStatus || (voiceEnabled ? 'Voice replies on' : 'Text chat only')}</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button type="button" onClick={isListening ? stopListening : startListening} className="btn-ghost" style={{ padding: '5px 8px', fontSize: 11 }} disabled={!voiceSupported}>
+                {isListening ? <MicOff style={{ width: 14, height: 14 }} /> : <Mic style={{ width: 14, height: 14 }} />}
+                <span>{isListening ? 'Stop' : 'Speak'}</span>
+              </button>
+              <button type="button" onClick={() => setVoiceEnabled(prev => !prev)} className="btn-ghost" style={{ padding: '5px 8px', fontSize: 11 }}>
+                {voiceEnabled ? <Volume2 style={{ width: 14, height: 14 }} /> : <VolumeX style={{ width: 14, height: 14 }} />}
+                <span>{voiceEnabled ? 'Voice on' : 'Voice off'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Crisis alert banner */}

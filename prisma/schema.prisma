@@ -34,3 +34,18 @@ model QuizScore {
 
   @@map("quiz_scores")
 }
+
+model JournalEntry {
+  id              String   @id @default(uuid()) @db.Uuid
+  clientId        String   @map("client_id")
+  title           String
+  content         String
+  tags            Json?
+  sentimentLabel  String?  @map("sentiment_label")
+  sentimentScore  Float?   @map("sentiment_score")
+  sentimentModel  String?  @map("sentiment_model")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([clientId, createdAt])
+  @@map("journal_entries")
+}

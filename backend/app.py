@@ -4,6 +4,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from groq_client import ask_groq
 from superbase_client import log_vent, log_resilience, log_quiz_score
+from sentiment import analyze_sentiment
 
 load_dotenv()
 
@@ -84,6 +85,20 @@ def quiz_score():
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False}), 500
+
+
+@app.route("/api/sentiment", methods=["POST"])
+def sentiment():
+    data = request.get_json()
+    text = data.get("text", "").strip() if data else ""
+    if not text:
+        return jsonify({"error": "Text is required"}), 400
+
+    try:
+        return jsonify(analyze_sentiment(text))
+    except Exception as e:
+        print(f"[Sentiment API Error] {e}")
+        return jsonify({"error": "Sentiment analysis is temporarily unavailable."}), 503
 
 
 # ─── Run ───────────────────────────────────────────────────────────────────────

@@ -22,38 +22,51 @@ export default function JournalPage() {
   const [tags, setTags] = useState('');
   const [privacyActive, setPrivacyActive] = useState(false);
   const [sentimentTone, setSentimentTone] = useState('');
+  const [sentimentScore, setSentimentScore] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     localStorage.setItem('mindease_journals', JSON.stringify(entries));
   }, [entries]);
 
-  // Sentiment analysis on input
-  const handleContentChange = (e) => {
-    const text = e.target.value;
-    setContent(text);
-
-    if (!text.trim()) {
+  useEffect(() => {
+    const text = content.trim();
+    if (!text) {
       setSentimentTone('');
-      return;
+      setSentimentScore(null);
+      return undefined;
     }
 
-    const lower = text.toLowerCase();
-    const positiveWords = ['grateful', 'calm', 'peace', 'happy', 'relieved', 'proud', 'hopeful', 'good', 'joy'];
-    const stressWords = ['exhausted', 'overwhelmed', 'anxious', 'stress', 'fear', 'scared', 'panic', 'crying', 'sad'];
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setIsAnalyzing(true);
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'}/api/sentiment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error('Sentiment request failed');
+        const result = await response.json();
+        setSentimentTone(result.label);
+        setSentimentScore(result.score);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setSentimentTone('Analysis unavailable');
+          setSentimentScore(null);
+        }
+      } finally {
+        setIsAnalyzing(false);
+      }
+    }, 450);
 
-    let pos = 0, stress = 0;
-    positiveWords.forEach(w => { if (lower.includes(w)) pos++; });
-    stressWords.forEach(w => { if (lower.includes(w)) stress++; });
-
-    if (stress > pos) {
-      setSentimentTone('Vulnerable & Stressed');
-    } else if (pos > stress) {
-      setSentimentTone('Hopeful & Grounded');
-    } else {
-      setSentimentTone('Reflective & Neutral');
-    }
-  };
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [content]);
 
   const handleSave = () => {
     if (!content.trim()) {
@@ -67,6 +80,7 @@ export default function JournalPage() {
       content: content.trim(),
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       sentimentTone: sentimentTone || 'Reflective',
+      sentimentScore,
       timestamp: new Date().toISOString()
     };
 
@@ -76,6 +90,7 @@ export default function JournalPage() {
     setContent('');
     setTags('');
     setSentimentTone('');
+    setSentimentScore(null);
   };
 
   const handleDelete = (id) => {
@@ -103,7 +118,7 @@ export default function JournalPage() {
         </button>
       </div>
       <p className="section-subtitle">
-        Write your unfiltered thoughts. Everything stays on your local browser. Client-side sentiment analysis highlights emotional tone visible strictly to you.
+        Write your unfiltered thoughts. Entries stay on your local browser. The Hugging Face sentiment model highlights emotional tone without exposing your journal in the interface.
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
@@ -143,7 +158,7 @@ export default function JournalPage() {
           <textarea 
             rows={7} 
             value={content}
-            onChange={handleContentChange}
+            onChange={(e) => setContent(e.target.value)}
             placeholder="Write freely here. Nobody else has access to this space..." 
             className={`styled-textarea ${privacyActive ? 'privacy-blur-active' : ''}`}
           />
@@ -151,8 +166,8 @@ export default function JournalPage() {
           {/* Real-time sentiment preview */}
           {sentimentTone && (
             <div style={{ margin: '12px 0', padding: '10px 14px', background: 'rgba(255,255,255,0.7)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--card-border)', fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Emotional Tone: <strong style={{ color: sentimentTone.includes('Stressed') ? '#9c274d' : sentimentTone.includes('Hopeful') ? '#1b6844' : 'var(--deep-purple)' }}>{sentimentTone}</strong></span>
-              <span style={{ fontSize: 10, color: 'var(--text-light)' }}>Visible only to you</span>
+              <span>Emotional Tone: <strong style={{ color: 'var(--deep-purple)' }}>{isAnalyzing ? 'Analyzing...' : sentimentTone}</strong></span>
+              <span style={{ fontSize: 10, color: 'var(--text-light)' }}>{sentimentScore === null ? 'Visible only to you' : `${Math.round(sentimentScore * 100)}% confidence`}</span>
             </div>
           )}
 

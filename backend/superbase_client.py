@@ -1,56 +1,27 @@
-import os
-from supabase import create_client, Client
-from dotenv import load_dotenv
+from uuid import uuid4
 
-load_dotenv()
-
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-
-supabase: Client = None
-
-def get_supabase():
-    global supabase
-    if supabase is None and SUPABASE_URL and SUPABASE_KEY:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    return supabase
+from database import fetch_one
 
 def log_vent(user_id: str, content: str, ai_response: str):
-    """Log a vent entry to Supabase (silently fails if not configured)."""
-    try:
-        db = get_supabase()
-        if db:
-            db.table("vent_logs").insert({
-                "user_id": user_id,
-                "content": content,
-                "ai_response": ai_response
-            }).execute()
-    except Exception as e:
-        print(f"[Supabase] vent_logs insert failed: {e}")
+    """Persist a vent entry in the Supabase PostgreSQL database."""
+    fetch_one(
+        """INSERT INTO vent_logs (id, user_id, content, ai_response)
+           VALUES (%s, %s, %s, %s) RETURNING id""",
+        (str(uuid4()), user_id, content, ai_response),
+    )
 
 def log_resilience(user_id: str, scenario: str, user_response: str, ai_feedback: str):
-    """Log a resilience entry to Supabase (silently fails if not configured)."""
-    try:
-        db = get_supabase()
-        if db:
-            db.table("resilience_logs").insert({
-                "user_id": user_id,
-                "scenario": scenario,
-                "user_response": user_response,
-                "ai_feedback": ai_feedback
-            }).execute()
-    except Exception as e:
-        print(f"[Supabase] resilience_logs insert failed: {e}")
+    """Persist a resilience entry in the Supabase PostgreSQL database."""
+    fetch_one(
+        """INSERT INTO resilience_logs (id, user_id, scenario, user_response, ai_feedback)
+           VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+        (str(uuid4()), user_id, scenario, user_response, ai_feedback),
+    )
 
 def log_quiz_score(user_id: str, score: int, total: int):
-    """Log a quiz score to Supabase (silently fails if not configured)."""
-    try:
-        db = get_supabase()
-        if db:
-            db.table("quiz_scores").insert({
-                "user_id": user_id,
-                "score": score,
-                "total": total
-            }).execute()
-    except Exception as e:
-        print(f"[Supabase] quiz_scores insert failed: {e}")
+    """Persist a quiz score in the Supabase PostgreSQL database."""
+    fetch_one(
+        """INSERT INTO quiz_scores (id, user_id, score, total)
+           VALUES (%s, %s, %s, %s) RETURNING id""",
+        (str(uuid4()), user_id, score, total),
+    )

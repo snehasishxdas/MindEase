@@ -2,7 +2,7 @@
 
 ## Database migration
 
-Before deploying the account features, run `backend/migrations/001_accounts_and_activity.sql` once against the same Supabase PostgreSQL database used by `DATABASE_URL` (for example, in the Supabase SQL Editor). The migration creates account, OTP, and activity tables and adds nullable ownership columns to feature data. Existing anonymous records stay unclaimed and are not exposed to new accounts.
+Before deploying the account features, run `backend/migrations/001_accounts_and_activity.sql` once against the Supabase PostgreSQL database used by `DATABASE_URL` (for example, in the Supabase SQL Editor). The migration creates account, OTP, and activity tables and adds nullable ownership columns to feature data. Existing anonymous records stay unclaimed and are not exposed to new accounts. MindEase does not use Supabase Auth; accounts and OTP challenges are stored in PostgreSQL, and OTP email is sent through SMTP.
 
 ## Environment variables
 
@@ -14,7 +14,8 @@ Configure these in Vercel for Production and Preview, and in the server environm
 - `SMTP_HOST` and `SMTP_PORT`: for Gmail, use `smtp.gmail.com` and `587`.
 - `ADMIN_EMAIL`: the one administrator email address.
 - `ADMIN_PASSWORD_HASH`: a Werkzeug password hash, not the plain password.
-- `DATABASE_URL`, `GROQ_API_KEY`, `SUPABASE_URL`, and `SUPABASE_KEY` when the associated existing integrations are enabled.
+- `DATABASE_URL`: the Supabase PostgreSQL connection string used for all persistent application data, including accounts and wellness activity.
+- `GROQ_API_KEY`: required for AI support and resilience responses.
 
 Generate secrets locally with:
 
@@ -33,5 +34,7 @@ Never put real secrets in `.env.example`, source code, or Git. `SMTP_PASSWORD`, 
 ## Notifications and access
 
 User registration and each new user sign-in require an email code. Profile edits and account deletion also require email verification. Activity emails contain action names and timestamps only, and users can decline them during registration. SMS is not enabled; a mobile number alone cannot send SMS without a configured SMS provider.
+
+Journal entries are screened with local rules for burnout indicators and possible self-harm language; journal text is not sent to an AI provider. When possible self-harm language is detected, `ADMIN_EMAIL` receives the user's name, email address, and alert category, but not the journal text. The user is shown urgent support resources. This heuristic can miss signals or flag wording by mistake and is not a diagnosis or emergency-monitoring service; admins must follow their established safeguarding process.
 
 Email copy uses fixed MindEase templates rather than runtime AI generation so private wellness content is never sent to an AI provider. Emergency support remains reachable before sign-in. Admin access is separate from user accounts and uses the configured email/password hash.

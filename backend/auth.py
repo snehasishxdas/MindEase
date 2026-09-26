@@ -99,6 +99,23 @@ def _send_email(recipient, subject, heading, paragraphs, code=None):
         smtp.send_message(message)
 
 
+def send_safety_alert(user):
+    admin_email = _email(os.environ.get("ADMIN_EMAIL"))
+    if not admin_email:
+        raise RuntimeError("ADMIN_EMAIL is not configured")
+    _send_email(
+        admin_email,
+        "MindEase possible self-harm safety alert",
+        "A journal entry triggered a safety signal",
+        [
+            f"Account name: {user['full_name']}",
+            f"Account email: {user['email']}",
+            "Signal: possible self-harm language detected by an automated rules-based screen.",
+            "The journal text is intentionally not included. This signal is not a diagnosis or confirmation of immediate danger. Follow your established safeguarding process; this system is not monitored as an emergency service.",
+        ],
+    )
+
+
 def _send_otp(email, purpose, payload=None):
     now = datetime.now(timezone.utc)
     code = f"{secrets.randbelow(1_000_000):06d}"

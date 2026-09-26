@@ -7,10 +7,11 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env.local")
 
-from auth import auth_bp, record_activity, user_required
+from auth import auth_bp, record_activity, send_safety_alert, user_required
 from groq_client import ask_groq
 from superbase_client import log_vent, log_resilience, log_quiz_score
 from sentiment import analyze_sentiment
+from burnout import assess_journal
 from database import connection, create_booking, create_journal, create_mood, create_peer_message, fetch_all
 
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
@@ -172,10 +173,20 @@ def journals():
     if not data.get("content", "").strip():
         return jsonify({"error": "content is required"}), 400
     try:
+        screening = assess_journal(data["content"])
         result = create_journal(str(g.current_user["id"]), data.get("title") or "Daily Reflection", data["content"].strip(),
                                 data.get("tags"), data.get("sentimentLabel"), data.get("sentimentScore"), data.get("sentimentModel"))
         record_activity(g.current_user["id"], "journal_entry", "Saved a private journal entry.")
-        return jsonify(serialize_row(result)), 201
+        screening["admin_notified"] = False
+        if screening["self_harm_concern"]:
+            try:
+                send_safety_alert(g.current_user)
+                screening["admin_notified"] = True
+            except Exception as error:
+                app.logger.error("Could not send journal safety alert: %s", error)
+        response = serialize_row(result)
+        response["screening"] = screening
+        return jsonify(response), 201
     except Exception as e:
         print(f"[Journal API Error] {e}")
         return jsonify({"error": "Journal entry could not be saved."}), 503

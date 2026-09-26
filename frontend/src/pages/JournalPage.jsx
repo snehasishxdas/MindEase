@@ -9,7 +9,7 @@ const PROMPTS = [
   "What is one thing you did well this week despite feeling tired?"
 ];
 
-export default function JournalPage() {
+export default function JournalPage({ onOpenCrisis }) {
   const [entries, setEntries] = useState([]);
 
   const [title, setTitle] = useState('');
@@ -20,6 +20,8 @@ export default function JournalPage() {
   const [sentimentScore, setSentimentScore] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [safetyDisclosureAccepted, setSafetyDisclosureAccepted] = useState(false);
+  const [latestScreening, setLatestScreening] = useState(null);
 
   useEffect(() => {
     apiRequest('/api/journals')
@@ -83,6 +85,8 @@ export default function JournalPage() {
         sentimentScore, sentimentModel: 'vaderSentiment'
       })});
       setEntries(prev => [{ ...saved, id: saved.id, tags: saved.tags || [], sentimentTone: saved.sentiment_label, timestamp: saved.created_at }, ...prev]);
+      setLatestScreening(saved.screening || null);
+      if (saved.screening?.self_harm_concern) onOpenCrisis?.();
     } catch {
       alert('The journal entry could not be saved. Please try again.');
       return;
@@ -93,6 +97,7 @@ export default function JournalPage() {
     setTags('');
     setSentimentTone('');
     setSentimentScore(null);
+    setSafetyDisclosureAccepted(false);
   };
 
   const handleDelete = async (id) => {
@@ -125,7 +130,7 @@ export default function JournalPage() {
         </button>
       </div>
       <p className="section-subtitle">
-        Write your unfiltered thoughts. Entries stay on your local browser. The Hugging Face sentiment model highlights emotional tone without exposing your journal in the interface.
+        Your entries are saved to your account. MindEase screens them for burnout signs and possible self-harm language using rules, not an AI service. This is not a diagnosis or emergency monitoring. If a possible self-harm signal is found, the admin is emailed your name, email, and signal category, never your journal text.
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
@@ -178,6 +183,18 @@ export default function JournalPage() {
             </div>
           )}
 
+          {latestScreening && (
+            <div role="status" style={{ margin: '12px 0', padding: '12px 14px', background: latestScreening.self_harm_concern ? 'rgba(247, 197, 208, 0.45)' : 'rgba(255,255,255,0.7)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--card-border)', fontSize: 12 }}>
+              <strong>Burnout check: {latestScreening.burnout_level}</strong>
+              <p style={{ margin: '6px 0 0' }}>This rules-based check can miss things or flag wording by mistake; it is not a clinical assessment.</p>
+              {latestScreening.self_harm_concern && (
+                <p style={{ margin: '6px 0 0' }}>
+                  A possible self-harm signal was found. {latestScreening.admin_notified ? 'The admin was notified without your journal text.' : 'The admin could not be notified automatically.'} If you may be in immediate danger, contact local emergency services or open urgent support now.
+                </p>
+              )}
+            </div>
+          )}
+
           <input 
             type="text" 
             value={tags}
@@ -187,7 +204,11 @@ export default function JournalPage() {
             style={{ marginTop: 12, marginBottom: 16 }} 
           />
 
-          <button onClick={handleSave} className="btn-primary" style={{ width: '100%' }}>
+          <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', margin: '0 0 12px', fontSize: 11, lineHeight: 1.5, color: 'var(--text-mid)' }}>
+            <input type="checkbox" checked={safetyDisclosureAccepted} onChange={event => setSafetyDisclosureAccepted(event.target.checked)} />
+            <span>I understand that entries are screened for safety signals and that a possible self-harm signal emails the admin my account name, email, and signal category, not my journal text.</span>
+          </label>
+          <button onClick={handleSave} disabled={!safetyDisclosureAccepted} className="btn-primary" style={{ width: '100%', opacity: safetyDisclosureAccepted ? 1 : 0.55 }}>
             <Bookmark style={{ width: 16, height: 16 }} />
             <span>Save to Private Journal</span>
           </button>
@@ -263,7 +284,7 @@ export default function JournalPage() {
 
           <div style={{ fontSize: 11, color: 'var(--text-light)', borderTop: '1px solid var(--card-border)', paddingTop: 12, marginTop: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Lock style={{ width: 13, height: 13, color: 'var(--deep-purple)' }} />
-            <span>Zero server uploads. Entries remain strictly in your browser's local storage.</span>
+            <span>Entries are stored with your account. The automated screen is not a substitute for professional help.</span>
           </div>
         </div>
 

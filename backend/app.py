@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 from flask import Flask, g, render_template, request, jsonify
@@ -6,6 +7,10 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env.local")
+
+backend_dir = str(Path(__file__).resolve().parent)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from auth import auth_bp, record_activity, send_safety_alert, user_required
 from groq_client import ask_groq

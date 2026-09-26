@@ -14,6 +14,6 @@ def analyze_sentiment(text: str) -> dict[str, str | float]:
     label = "positive" if compound >= 0.05 else "negative" if compound <= -0.05 else "neutral"
     return {
         "label": label,
-        "score": round(max(scores["pos"], scores["neg"], scores["neu"]), 4),
+        "score": round(abs(compound), 4),
         "model": "vaderSentiment",
     }

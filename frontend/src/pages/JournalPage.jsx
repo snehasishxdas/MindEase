@@ -174,7 +174,7 @@ export default function JournalPage() {
           {sentimentTone && (
             <div style={{ margin: '12px 0', padding: '10px 14px', background: 'rgba(255,255,255,0.7)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--card-border)', fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Emotional Tone: <strong style={{ color: 'var(--deep-purple)' }}>{isAnalyzing ? 'Analyzing...' : sentimentTone}</strong></span>
-              <span style={{ fontSize: 10, color: 'var(--text-light)' }}>{sentimentScore === null ? 'Visible only to you' : `${Math.round(sentimentScore * 100)}% confidence`}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-light)' }}>{sentimentScore === null ? 'Visible only to you' : `${Math.round(sentimentScore * 100)}% strength`}</span>
             </div>
           )}
 

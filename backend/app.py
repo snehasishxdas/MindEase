@@ -1,19 +1,20 @@
 import os
 from datetime import timedelta
+from pathlib import Path
 from flask import Flask, g, render_template, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env.local")
+
 from auth import auth_bp, record_activity, user_required
 from groq_client import ask_groq
 from superbase_client import log_vent, log_resilience, log_quiz_score
 from sentiment import analyze_sentiment
 from database import connection, create_booking, create_journal, create_mood, create_peer_message, fetch_all
 
-load_dotenv()
-
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 app = Flask(__name__, template_folder=frontend_dir, static_folder=os.path.join(frontend_dir, "static"))
-app.secret_key = os.environ.get("SESSION_SECRET") or ("local-" + os.urandom(32).hex())
 app.secret_key = os.environ.get("SESSION_SECRET")
 if not app.secret_key:
     raise RuntimeError("SESSION_SECRET must be configured before starting MindEase")

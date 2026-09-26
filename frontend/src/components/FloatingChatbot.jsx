@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { apiRequest } from '../api';
 
 const CRISIS_KEYWORDS = [
   'kill myself', 'suicide', 'end my life', 'harm myself', 'want to die', 
@@ -70,24 +71,20 @@ export default function FloatingChatbot({ onOpenCrisis }) {
 
     setIsLoading(true);
 
-    // Try backend if running
+    // Use the backend when available, then fall back to a local supportive reply.
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/vent', {
+      const data = await apiRequest('/api/vent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: query })
       });
-      if (res.ok) {
-        const data = await res.json();
-        addAssistantMessage({
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          text: data.response
-        });
-        setIsLoading(false);
-        if (shouldListenRef.current) startListening();
-        return;
-      }
+      addAssistantMessage({
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        text: data.response
+      });
+      setIsLoading(false);
+      if (shouldListenRef.current) startListening();
+      return;
     } catch {}
 
     // Fallback supportive reply

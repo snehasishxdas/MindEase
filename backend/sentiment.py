@@ -1,24 +1,19 @@
 from functools import lru_cache
-import os
 
-from dotenv import load_dotenv
-from transformers import pipeline
-
-load_dotenv()
-
-MODEL_NAME = os.environ.get("HF_SENTIMENT_MODEL", "syedkhalid0/RoBERTa-Sentimental-Analysis-v1")
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 
 @lru_cache(maxsize=1)
-def get_sentiment_pipeline():
-    """Load the model once, on the first sentiment request."""
-    return pipeline("text-classification", model=MODEL_NAME)
+def get_sentiment_analyzer():
+    return SentimentIntensityAnalyzer()
 
 
 def analyze_sentiment(text: str) -> dict[str, str | float]:
-    result = get_sentiment_pipeline()(text, truncation=True)[0]
+    scores = get_sentiment_analyzer().polarity_scores(text)
+    compound = scores["compound"]
+    label = "positive" if compound >= 0.05 else "negative" if compound <= -0.05 else "neutral"
     return {
-        "label": str(result["label"]),
-        "score": round(float(result["score"]), 4),
-        "model": MODEL_NAME,
+        "label": label,
+        "score": round(max(scores["pos"], scores["neg"], scores["neu"]), 4),
+        "model": "vaderSentiment",
     }

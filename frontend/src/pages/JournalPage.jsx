@@ -47,14 +47,11 @@ export default function JournalPage() {
     const timer = setTimeout(async () => {
       setIsAnalyzing(true);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'}/api/sentiment`, {
+        const result = await apiRequest('/api/sentiment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text }),
           signal: controller.signal
         });
-        if (!response.ok) throw new Error('Sentiment request failed');
-        const result = await response.json();
         setSentimentTone(result.label);
         setSentimentScore(result.score);
       } catch (error) {
@@ -83,7 +80,7 @@ export default function JournalPage() {
       const saved = await apiRequest('/api/journals', { method: 'POST', body: JSON.stringify({
         client_id: clientId(), title: title.trim() || 'Daily Reflection', content: content.trim(),
         tags: tags.split(',').map(t => t.trim()).filter(Boolean), sentimentLabel: sentimentTone || 'Reflective',
-        sentimentScore, sentimentModel: 'syedkhalid0/RoBERTa-Sentimental-Analysis-v1'
+        sentimentScore, sentimentModel: 'vaderSentiment'
       })});
       setEntries(prev => [{ ...saved, id: saved.id, tags: saved.tags || [], sentimentTone: saved.sentiment_label, timestamp: saved.created_at }, ...prev]);
     } catch {

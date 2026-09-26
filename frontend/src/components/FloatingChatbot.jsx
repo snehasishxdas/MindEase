@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { X, Send, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { apiRequest } from '../api';
+import MindMirrorMark from './MindMirrorMark';
 
 const CRISIS_KEYWORDS = [
   'kill myself', 'suicide', 'end my life', 'harm myself', 'want to die', 
@@ -181,10 +182,10 @@ export default function FloatingChatbot({ onOpenCrisis }) {
       <button 
         onClick={() => setIsOpen(!isOpen)} 
         className="floating-chat-trigger" 
-        aria-label="Open AI Wellness Companion"
+        aria-label="Open MindEase vent and burnout support"
       >
-        <Sparkles style={{ width: 17, height: 17 }} />
-        <span>Talk with AI</span>
+        <MindMirrorMark variant="candle" className="vent-candle-mark" />
+        <span>Vent &amp; Burnout</span>
       </button>
 
       {/* Floating Chat Modal */}
@@ -192,12 +193,12 @@ export default function FloatingChatbot({ onOpenCrisis }) {
         <div className="floating-chat-window" role="dialog" aria-modal="true" aria-label="AI Wellness Chat">
           <div className="chat-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.6)', flexShrink: 0, boxShadow: '0 2px 8px rgba(123,94,167,0.2)' }}>
-                <img src="/MindEase_logo.jpeg" alt="MindEase" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <div className="chat-brand-mark">
+                <MindMirrorMark variant="candle" />
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-dark)' }}>MindEase AI Companion</div>
-                <div style={{ fontSize: 10, color: 'var(--text-mid)' }}>Supportive Student Listener</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-dark)' }}>MindEase Vent Space</div>
+                <div style={{ fontSize: 10, color: 'var(--text-mid)' }}>Vent and burnout reflection</div>
               </div>
             </div>
             <button 

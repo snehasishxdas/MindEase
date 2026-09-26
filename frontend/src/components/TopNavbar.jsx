@@ -14,6 +14,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import MindMirrorMark from './MindMirrorMark';
 
 export default function TopNavbar({ onOpenCrisis, user, onLogout }) {
   const location = useLocation();
@@ -30,11 +31,7 @@ export default function TopNavbar({ onOpenCrisis, user, onLogout }) {
       {/* Brand Logo */}
       <Link to="/" className="top-navbar-logo" onClick={closeMobile}>
         <div className="top-navbar-logo-icon">
-          <img 
-            src="/MindEase_logo.jpeg" 
-            alt="MindEase Logo" 
-            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '11px', display: 'block' }} 
-          />
+          <MindMirrorMark />
         </div>
         <div className="top-navbar-logo-text">
           <span className="top-navbar-brand">MindEase</span>
@@ -75,6 +72,11 @@ export default function TopNavbar({ onOpenCrisis, user, onLogout }) {
         >
           <HeartHandshake className="w-4 h-4" />
           <span>Resources</span>
+        </NavLink>
+
+        <NavLink to="/resilience" className={({ isActive }) => `top-nav-btn ${isActive ? 'active' : ''}`}>
+          <MindMirrorMark className="nav-mindmirror-mark" />
+          <span>Role-play</span>
         </NavLink>
 
         <NavLink 
@@ -173,6 +175,10 @@ export default function TopNavbar({ onOpenCrisis, user, onLogout }) {
         >
           <HeartHandshake className="w-4 h-4" />
           <span>Self-Help Resources</span>
+        </NavLink>
+        <NavLink to="/resilience" onClick={closeMobile} className={({ isActive }) => `top-nav-btn ${isActive ? 'active' : ''}`}>
+          <MindMirrorMark className="nav-mindmirror-mark" />
+          <span>Resilience Role-play</span>
         </NavLink>
 
         <NavLink 

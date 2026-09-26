@@ -155,6 +155,16 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(role, "admin")
         send_email.assert_called_once()
 
+    def test_admin_login_reports_malformed_password_hash_as_configuration_error(self):
+        with patch.dict(os.environ, {"ADMIN_EMAIL": "admin@example.com", "ADMIN_PASSWORD_HASH": "invalid"}), \
+             patch.object(auth, "_admin_is_rate_limited", return_value=False):
+            response = self.client.post("/api/auth/admin/login", json={
+                "email": "admin@example.com",
+                "password": "any-password",
+            })
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("misconfigured", response.get_json()["error"])
+
     def test_admin_login_fails_closed_when_alert_cannot_be_sent(self):
         password_hash = generate_password_hash("not-a-production-password")
         with patch.dict(os.environ, {"ADMIN_EMAIL": "admin@example.com", "ADMIN_PASSWORD_HASH": password_hash}), \
@@ -169,6 +179,42 @@ class AuthRouteTests(unittest.TestCase):
                 role = current_session.get("role")
         self.assertEqual(response.status_code, 503)
         self.assertIsNone(role)
+
+    def test_admin_profile_update_preserves_email_skips_otp_and_notifies_user(self):
+        with self.client.session_transaction() as current_session:
+            current_session["role"] = "admin"
+        fake_connection = _FakeConnection()
+        with patch.object(auth, "fetch_one", return_value=USER), \
+             patch.object(auth, "connection", return_value=fake_connection), \
+             patch.object(auth, "_send_email") as send_email, \
+             patch.object(auth, "_consume_otp") as consume_otp, \
+             patch.object(auth, "record_activity"):
+            response = self.client.put(f"/api/admin/users/{USER_ID}", json={
+                "full_name": "Updated User",
+                "email": "changed@example.com",
+                "mobile": "+15557654321",
+                "date_of_birth": "2001-02-03",
+            })
+        self.assertEqual(response.status_code, 200)
+        query, params = fake_connection.statements[0]
+        self.assertNotIn("email =", query)
+        self.assertEqual(params, ("Updated User", "+15557654321", "2001-02-03", USER_ID))
+        self.assertEqual(send_email.call_args.args[0], USER["email"])
+        consume_otp.assert_not_called()
+
+    def test_admin_profile_update_reports_notification_failure(self):
+        with self.client.session_transaction() as current_session:
+            current_session["role"] = "admin"
+        with patch.object(auth, "fetch_one", return_value=USER), \
+             patch.object(auth, "connection", return_value=_FakeConnection()), \
+             patch.object(auth, "_send_email", side_effect=RuntimeError("mail unavailable")):
+            response = self.client.put(f"/api/admin/users/{USER_ID}", json={
+                "full_name": "Updated User",
+                "mobile": USER["mobile"],
+                "date_of_birth": "2000-01-01",
+            })
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("account was updated", response.get_json()["error"])
 
 
 if __name__ == "__main__":

@@ -75,6 +75,36 @@ class JournalSafetyTests(unittest.TestCase):
         self.assertIn("journal text is intentionally not included", email_body)
         self.assertNotIn("I want to hurt myself", email_body)
 
+    def test_roleplay_carries_conversation_context_to_groq(self):
+        with patch.object(auth, "fetch_one", return_value=USER), \
+             patch.object(server_app, "ask_groq_chat", return_value="I can take my share if we divide the tasks.") as ask:
+            response = self.client.post("/api/resilience/roleplay", json={
+                "scenario_id": "group-project",
+                "mode": "reply",
+                "turns": [{"role": "assistant", "content": "Can you handle the whole presentation?"}],
+                "message": "I can help, but I need us to split the work fairly.",
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["response"], "I can take my share if we divide the tasks.")
+        messages = ask.call_args.args[1]
+        self.assertEqual(messages[0]["role"], "assistant")
+        self.assertEqual(messages[1]["role"], "user")
+
+    def test_roleplay_sends_crisis_language_to_support_instead_of_groq(self):
+        with patch.object(auth, "fetch_one", return_value=USER), \
+             patch.object(server_app, "ask_groq_chat") as ask:
+            response = self.client.post("/api/resilience/roleplay", json={
+                "scenario_id": "group-project",
+                "mode": "reply",
+                "turns": [],
+                "message": "I want to hurt myself tonight.",
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["crisis_detected"])
+        ask.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

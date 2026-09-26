@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Bookmark, Lock, Trash2, Search } from 'lucide-react';
 import { apiRequest } from '../api';
+import MindMirrorMark from '../components/MindMirrorMark';
 
 const PROMPTS = [
   "What gave you a tiny spark of peace today?",
@@ -8,6 +9,16 @@ const PROMPTS = [
   "Write down what is draining your energy right now:",
   "What is one thing you did well this week despite feeling tired?"
 ];
+
+const formatJournalTimestamp = (timestamp) => new Date(timestamp).toLocaleString('en-IN', {
+  timeZone: 'Asia/Kolkata',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+});
 
 export default function JournalPage({ onOpenCrisis }) {
   const [entries, setEntries] = useState([]);
@@ -185,7 +196,7 @@ export default function JournalPage({ onOpenCrisis }) {
 
           {latestScreening && (
             <div role="status" style={{ margin: '12px 0', padding: '12px 14px', background: latestScreening.self_harm_concern ? 'rgba(247, 197, 208, 0.45)' : 'rgba(255,255,255,0.7)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--card-border)', fontSize: 12 }}>
-              <strong>Burnout check: {latestScreening.burnout_level}</strong>
+              <strong className="burnout-check-heading"><MindMirrorMark variant="candle" /> Burnout check: {latestScreening.burnout_level}</strong>
               <p style={{ margin: '6px 0 0' }}>This rules-based check can miss things or flag wording by mistake; it is not a clinical assessment.</p>
               {latestScreening.self_harm_concern && (
                 <p style={{ margin: '6px 0 0' }}>
@@ -250,7 +261,7 @@ export default function JournalPage({ onOpenCrisis }) {
                       <div>
                         <strong style={{ fontSize: 13, color: 'var(--text-dark)' }}>{entry.title}</strong>
                         <div style={{ fontSize: 10, color: 'var(--text-light)' }}>
-                          {new Date(entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {formatJournalTimestamp(entry.timestamp)}
                         </div>
                       </div>
                       <button 

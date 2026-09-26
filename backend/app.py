@@ -13,7 +13,7 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 from auth import auth_bp, record_activity, send_safety_alert, user_required
-from groq_client import ask_groq
+from groq_client import ask_groq, ask_groq_chat
 from superbase_client import log_vent, log_resilience, log_quiz_score
 from sentiment import analyze_sentiment
 from burnout import assess_journal
@@ -54,6 +54,43 @@ RESILIENCE_SYSTEM_PROMPT = """You are a resilience coach for students. The stude
 (3) Suggest how they could improve their response to be more assertive or self-caring,
 (4) Provide a model response example that sets a healthy boundary compassionately.
 Keep the tone supportive, never critical."""
+
+ROLEPLAY_SCENARIOS = {
+    "group-project": {
+        "title": "Peer pressure on a group project",
+        "description": "A classmate expects you to complete most of a group assignment because you are good at the work.",
+        "other_person": "a classmate on the project",
+    },
+    "study-demands": {
+        "title": "Constant study group demands",
+        "description": "A friend keeps asking you to explain your notes late at night, cutting into your own study and rest time.",
+        "other_person": "a friend from your study group",
+    },
+    "harsh-feedback": {
+        "title": "Harsh feedback from a professor",
+        "description": "A professor criticizes your presentation in front of the class, and you want to respond calmly and ask for useful feedback.",
+        "other_person": "your professor",
+    },
+    "comparison-spiral": {
+        "title": "Social media comparison spiral",
+        "description": "A peer talks about internships and achievements they have posted online, and you feel behind.",
+        "other_person": "a peer who is sharing recent achievements",
+    },
+    "deadline-clash": {
+        "title": "Overwhelming deadline clash",
+        "description": "Several major assignments are due on the same day, and a group member asks you to cover their share too.",
+        "other_person": "a group member asking you to take on extra work",
+    },
+    "family-career": {
+        "title": "Unsolicited family career advice",
+        "description": "A family member keeps pushing you toward a career path you do not want.",
+        "other_person": "a family member who cares but is being pushy",
+    },
+}
+
+ROLEPLAY_SYSTEM_PROMPT = """You are playing the other person in a realistic rehearsal conversation for a student. Stay in character and respond naturally to what the student says, as a real person might. Keep each reply to 1-3 sentences and let the interaction evolve; do not agree too easily, escalate into abuse, threaten, insult, or make the scene frightening. The goal is safe practice, not winning. Do not coach or evaluate during the scene. If the student asks to stop, stop immediately and respond supportively. This is practice, not therapy or a substitute for professional support."""
+
+ROLEPLAY_DEBRIEF_PROMPT = """You are a supportive communication-skills coach debriefing a short role-play rehearsal. Briefly reflect what the student did effectively, offer one specific alternative phrase or next step they could try, and ask how the practice felt. Be warm and nonjudgmental; do not diagnose or imply there is one perfect response. Keep the debrief under 150 words."""
 
 # ─── Routes ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +141,55 @@ def resilience():
     except Exception as e:
         print(f"[Resilience API Error] {e}")
         return jsonify({"error": "Something went wrong. Please try again."}), 500
+
+
+@app.route("/api/resilience/roleplay", methods=["POST"])
+@user_required
+def resilience_roleplay():
+    data = request.get_json(silent=True) or {}
+    scenario = ROLEPLAY_SCENARIOS.get(data.get("scenario_id"))
+    mode = data.get("mode")
+    turns = data.get("turns", [])
+    if not scenario:
+        return jsonify({"error": "Choose a valid practice scenario."}), 400
+    if mode not in {"start", "reply", "debrief"}:
+        return jsonify({"error": "Choose a valid role-play action."}), 400
+    if not isinstance(turns, list) or len(turns) > 16:
+        return jsonify({"error": "This practice has reached its conversation limit."}), 400
+    if any(
+        not isinstance(turn, dict)
+        or turn.get("role") not in {"user", "assistant"}
+        or not isinstance(turn.get("content"), str)
+        or not turn["content"].strip()
+        or len(turn["content"]) > 1200
+        for turn in turns
+    ):
+        return jsonify({"error": "The conversation contains an invalid message."}), 400
+
+    messages = [{"role": turn["role"], "content": turn["content"]} for turn in turns]
+    if mode == "start":
+        messages.append({"role": "user", "content": "Begin the scene with a natural opening line."})
+        system_prompt = f"{ROLEPLAY_SYSTEM_PROMPT}\n\nScenario: {scenario['description']}\nYou are {scenario['other_person']}."
+    elif mode == "reply":
+        user_message = data.get("message", "")
+        if not isinstance(user_message, str) or not user_message.strip() or len(user_message) > 1200:
+            return jsonify({"error": "Write a response of 1,200 characters or fewer."}), 400
+        if assess_journal(user_message)["self_harm_concern"]:
+            return jsonify({"crisis_detected": True}), 200
+        messages.append({"role": "user", "content": user_message.strip()})
+        system_prompt = f"{ROLEPLAY_SYSTEM_PROMPT}\n\nScenario: {scenario['description']}\nYou are {scenario['other_person']}."
+    else:
+        if not messages:
+            return jsonify({"error": "Complete a few turns before starting a debrief."}), 400
+        messages.append({"role": "user", "content": "Step out of the scene and debrief this practice with me."})
+        system_prompt = ROLEPLAY_DEBRIEF_PROMPT
+
+    try:
+        response = ask_groq_chat(system_prompt, messages)
+        return jsonify({"response": response})
+    except Exception as error:
+        app.logger.error("Role-play request failed: %s", error)
+        return jsonify({"error": "The practice conversation could not respond. Please try again."}), 503
 
 
 @app.route("/api/quiz-score", methods=["POST"])

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../api';
+import MindMirrorMark from '../components/MindMirrorMark';
 
 export default function AuthPage({ onAuthenticated, onOpenCrisis }) {
   const location = useLocation();
@@ -83,13 +84,13 @@ export default function AuthPage({ onAuthenticated, onOpenCrisis }) {
     <main className="auth-screen">
       <section className="auth-brand-panel" aria-label="MindEase">
         <Link to="/" className="auth-brand-mark">
-          <img src="/MindEase_logo.jpeg" alt="" />
+          <MindMirrorMark />
           <span>MindEase</span>
         </Link>
         <div className="auth-brand-copy">
-          <span className="auth-eyebrow">A quieter place to land</span>
-          <h1>Make room for how you feel.</h1>
-          <p>Your private space for reflection, support, and small steps forward.</p>
+          <span className="auth-eyebrow">Welcome to</span>
+          <h1>MindEase</h1>
+          <p>A gentler space for reflection, venting, and practicing difficult conversations.</p>
         </div>
         <button className="auth-crisis-link" type="button" onClick={onOpenCrisis}>Need urgent support?</button>
       </section>

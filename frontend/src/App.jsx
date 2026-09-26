@@ -12,9 +12,11 @@ import ResourcesPage from './pages/ResourcesPage';
 import PeerRoomsPage from './pages/PeerRoomsPage';
 import CounsellorPage from './pages/CounsellorPage';
 import CampusInsightsPage from './pages/CampusInsightsPage';
+import ResiliencePage from './pages/ResiliencePage';
 import AuthPage from './pages/AuthPage';
 import AccountPage from './pages/AccountPage';
 import AdminPage from './pages/AdminPage';
+import MindMirrorMark from './components/MindMirrorMark';
 
 // Scroll window to top on route change
 function ScrollToTop() {
@@ -74,10 +76,10 @@ export default function App() {
 
   if (sessionInfo.role === 'admin') {
     return (
-      <div className="app-root">
+      <div className="app-root mindmirror-app">
         <header className="top-navbar admin-navbar">
           <Link to="/admin" className="top-navbar-logo">
-            <img src="/MindEase_logo.jpeg" alt="" className="top-navbar-logo-icon" />
+            <span className="top-navbar-logo-icon"><MindMirrorMark /></span>
             <span className="top-navbar-brand">MindEase Admin</span>
           </Link>
           <button type="button" className="admin-signout" onClick={handleLogout}>Sign out</button>
@@ -93,16 +95,10 @@ export default function App() {
   }
 
   return (
-    <div className="app-root">
+    <div className="app-root mindmirror-app">
       <ScrollToTop />
 
-      {/* Animated Warm Pastel Ambient Blobs */}
-      <div className="blob blob-1" aria-hidden="true" />
-      <div className="blob blob-2" aria-hidden="true" />
-      <div className="blob blob-3" aria-hidden="true" />
-      <div className="blob blob-4" aria-hidden="true" />
-
-      {/* Liquid Glass Top Navbar */}
+      {/* MindEase navigation */}
       <TopNavbar onOpenCrisis={() => setIsCrisisOpen(true)} user={sessionInfo.user} onLogout={handleLogout} />
 
       {/* Main Content Area (Fills space to push footer to the end) */}
@@ -128,6 +124,7 @@ export default function App() {
 
           {/* Campus Insights & Aliases */}
           <Route path="/campus-insights" element={<CampusInsightsPage />} />
+          <Route path="/resilience" element={<ResiliencePage onOpenCrisis={() => setIsCrisisOpen(true)} />} />
           <Route path="/account" element={<AccountPage user={sessionInfo.user} onUserUpdated={refreshSession} onDeleted={() => { setSessionInfo({ role: null, user: null }); navigate('/', { replace: true }); }} />} />
           <Route path="/admin" element={<Navigate to="/" replace />} />
           <Route path="/insights" element={<Navigate to="/campus-insights" replace />} />
@@ -149,11 +146,7 @@ export default function App() {
             <div className="footer-brand">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                 <div style={{ width: '34px', height: '34px', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.6)', boxShadow: '0 4px 12px rgba(123, 94, 167, 0.2)', flexShrink: 0 }}>
-                  <img 
-                    src="/MindEase_logo.jpeg" 
-                    alt="MindEase Logo" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
-                  />
+                  <MindMirrorMark />
                 </div>
                 <h3 style={{ margin: 0 }}>MindEase</h3>
               </div>

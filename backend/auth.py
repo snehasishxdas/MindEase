@@ -347,12 +347,19 @@ def admin_login():
         return jsonify({"error": "Administrator credentials are not configured."}), 503
     if not email or email != admin_email:
         return jsonify({"error": "Invalid administrator credentials."}), 401
+    hash_method, separator, hash_value = password_hash.partition("$")
+    if (not separator or not hash_value or
+            not (hash_method.startswith("scrypt:") or hash_method.startswith("pbkdf2:")) or
+            "$" not in hash_value):
+        current_app.logger.error("ADMIN_PASSWORD_HASH is invalid")
+        return jsonify({"error": "Administrator credentials are misconfigured."}), 503
     if _admin_is_rate_limited(email):
         return jsonify({"error": "Too many attempts. Try again in 15 minutes."}), 429
     try:
         password_valid = check_password_hash(password_hash, data.get("password", ""))
     except (TypeError, ValueError):
-        password_valid = False
+        current_app.logger.error("ADMIN_PASSWORD_HASH is invalid")
+        return jsonify({"error": "Administrator credentials are misconfigured."}), 503
     if not password_valid:
         _record_admin_failure(email)
         return jsonify({"error": "Invalid administrator credentials."}), 401
@@ -534,6 +541,7 @@ def admin_update_user(user_id):
                     [f"Hello {profile['full_name']},", "An administrator updated your name, mobile number, or date of birth. Your email address was not changed."])
     except Exception as error:
         current_app.logger.error("Account update email failed: %s", error)
+        return jsonify({"error": "The account was updated, but the notification email could not be sent."}), 503
     record_activity(user_id, "admin_profile_updated", "An administrator updated your account details.", email_user=False)
     return jsonify({"ok": True})
 

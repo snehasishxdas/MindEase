@@ -112,7 +112,6 @@ export default function AuthPage({ onAuthenticated, onOpenCrisis }) {
               <label>Mobile number<input required type="tel" autoComplete="tel" value={form.mobile} onChange={update('mobile')} placeholder="+1 555 123 4567" /></label>
               <label>Date of birth<input required type="date" autoComplete="bday" value={form.date_of_birth} onChange={update('date_of_birth')} /></label>
               <label className="auth-consent"><input type="checkbox" checked={form.activity_emails_enabled} onChange={(event) => setForm((current) => ({ ...current, activity_emails_enabled: event.target.checked }))} /><span>Email me account activity summaries. These include action names and times, never private content.</span></label>
-                          <label className="auth-consent"><input type="checkbox" checked={form.activity_emails_enabled} onChange={(event) => setForm((current) => ({ ...current, activity_emails_enabled: event.target.checked }))} /><span>Email me account activity summaries. These include action names and times, never private content.</span></label>
             </>
           )}
 

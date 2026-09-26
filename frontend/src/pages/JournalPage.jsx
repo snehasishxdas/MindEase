@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Bookmark, Lock, Trash2, Search } from 'lucide-react';
-import { apiRequest, clientId } from '../api';
+import { apiRequest } from '../api';
 
 const PROMPTS = [
   "What gave you a tiny spark of peace today?",
@@ -22,7 +22,7 @@ export default function JournalPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    apiRequest(`/api/journals?client_id=${encodeURIComponent(clientId())}`)
+    apiRequest('/api/journals')
       .then(rows => setEntries(rows.map(row => ({
         ...row,
         id: row.id,
@@ -78,7 +78,7 @@ export default function JournalPage() {
 
     try {
       const saved = await apiRequest('/api/journals', { method: 'POST', body: JSON.stringify({
-        client_id: clientId(), title: title.trim() || 'Daily Reflection', content: content.trim(),
+        title: title.trim() || 'Daily Reflection', content: content.trim(),
         tags: tags.split(',').map(t => t.trim()).filter(Boolean), sentimentLabel: sentimentTone || 'Reflective',
         sentimentScore, sentimentModel: 'vaderSentiment'
       })});

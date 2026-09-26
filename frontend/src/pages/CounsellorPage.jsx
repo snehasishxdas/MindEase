@@ -14,7 +14,7 @@ import {
   Trash2,
   Sparkles
 } from 'lucide-react';
-import { apiRequest, clientId } from '../api';
+import { apiRequest } from '../api';
 
 const COUNSELLORS = [
   {
@@ -64,7 +64,7 @@ export default function CounsellorPage() {
   const [lastBooked, setLastBooked] = useState(null);
 
   useEffect(() => {
-    apiRequest(`/api/bookings?client_id=${encodeURIComponent(clientId())}`)
+    apiRequest('/api/bookings')
       .then(rows => setBookings(rows.map(row => ({
         ...row,
         id: row.id,
@@ -99,12 +99,11 @@ export default function CounsellorPage() {
       time: selectedSlot,
       mode: bookingMode,
       note: studentNote.trim(),
-      client_id: clientId(),
     };
 
     let newBooking;
     try {
-      const saved = await apiRequest('/api/bookings', { method: 'POST', body: JSON.stringify({ client_id: clientId(), ...booking }) });
+      const saved = await apiRequest('/api/bookings', { method: 'POST', body: JSON.stringify(booking) });
       newBooking = { ...booking, ...saved, id: saved.id, bookedAt: saved.created_at };
       setBookings(prev => [newBooking, ...prev]);
     } catch {

@@ -40,40 +40,40 @@ def fetch_one(query, params=()):
         return dict(row) if row else None
 
 
-def create_mood(client_id, score, label, tags, note):
+def create_mood(user_id, score, label, tags, note):
     return fetch_one(
-          """INSERT INTO mood_checkins (id, client_id, score, label, tags, note)
-              VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+        """INSERT INTO mood_checkins (id, client_id, user_id, score, label, tags, note)
+              VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
            RETURNING id, client_id, score, label, tags, note, created_at""",
-          (str(uuid4()), client_id, score, label, json.dumps(tags or []), note or None),
+        (str(uuid4()), user_id, user_id, score, label, json.dumps(tags or []), note or None),
     )
 
 
-def create_journal(client_id, title, content, tags, sentiment_label, sentiment_score, sentiment_model):
+def create_journal(user_id, title, content, tags, sentiment_label, sentiment_score, sentiment_model):
     return fetch_one(
           """INSERT INTO journal_entries
-              (id, client_id, title, content, tags, sentiment_label, sentiment_score, sentiment_model)
-              VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, %s)
+              (id, client_id, user_id, title, content, tags, sentiment_label, sentiment_score, sentiment_model)
+              VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s)
            RETURNING id, client_id, title, content, tags, sentiment_label, sentiment_score, sentiment_model, created_at""",
-          (str(uuid4()), client_id, title, content, json.dumps(tags or []), sentiment_label, sentiment_score, sentiment_model),
+        (str(uuid4()), user_id, user_id, title, content, json.dumps(tags or []), sentiment_label, sentiment_score, sentiment_model),
     )
 
 
-def create_booking(client_id, booking):
+def create_booking(user_id, booking):
     return fetch_one(
           """INSERT INTO counsellor_bookings
-              (id, client_id, counsellor_id, counsellor_name, role, location, booking_date, booking_time, mode, note)
-              VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+              (id, client_id, user_id, counsellor_id, counsellor_name, role, location, booking_date, booking_time, mode, note)
+              VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
            RETURNING *""",
-          (str(uuid4()), client_id, booking["counsellorId"], booking["counsellorName"], booking["role"], booking["location"],
+          (str(uuid4()), user_id, user_id, booking["counsellorId"], booking["counsellorName"], booking["role"], booking["location"],
          booking["date"], booking["time"], booking["mode"], booking.get("note", "")),
     )
 
 
-def create_peer_message(room_id, client_id, author, content):
+def create_peer_message(room_id, user_id, author, content):
     return fetch_one(
-          """INSERT INTO peer_messages (id, room_id, client_id, author, content)
-              VALUES (%s, %s, %s, %s, %s)
+        """INSERT INTO peer_messages (id, room_id, client_id, user_id, author, content)
+              VALUES (%s, %s, %s, %s, %s, %s)
            RETURNING *""",
-          (str(uuid4()), room_id, client_id, author, content),
+        (str(uuid4()), room_id, user_id, user_id, author, content),
     )

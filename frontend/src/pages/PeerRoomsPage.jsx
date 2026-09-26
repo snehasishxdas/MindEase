@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   RefreshCw
 } from 'lucide-react';
-import { apiRequest, clientId } from '../api';
+import { apiRequest } from '../api';
 
 const ROOMS = [
   { id: 'exam', name: 'Exam Pressure & Deadlines', icon: '📚', desc: 'Vent safely about finals, submissions, and thesis stress.' },
@@ -76,7 +76,7 @@ export default function PeerRoomsPage({ onOpenCrisis }) {
 
     try {
       const saved = await apiRequest('/api/peer-messages', { method: 'POST', body: JSON.stringify({
-        roomId: currentRoom, clientId: clientId(), author: userHandle, content: inputContent.trim()
+        roomId: currentRoom, author: userHandle, content: inputContent.trim()
       })});
       const newMsg = { ...saved, id: saved.id, roomId: saved.room_id, timestamp: new Date(saved.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
       setMessages(prev => [newMsg, ...prev]);

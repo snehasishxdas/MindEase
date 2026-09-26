@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
+import { apiRequest } from './api';
 import TopNavbar from './components/TopNavbar';
 import CrisisModal from './components/CrisisModal';
 import FloatingChatbot from './components/FloatingChatbot';
@@ -11,6 +12,9 @@ import ResourcesPage from './pages/ResourcesPage';
 import PeerRoomsPage from './pages/PeerRoomsPage';
 import CounsellorPage from './pages/CounsellorPage';
 import CampusInsightsPage from './pages/CampusInsightsPage';
+import AuthPage from './pages/AuthPage';
+import AccountPage from './pages/AccountPage';
+import AdminPage from './pages/AdminPage';
 
 // Scroll window to top on route change
 function ScrollToTop() {
@@ -23,7 +27,70 @@ function ScrollToTop() {
 
 export default function App() {
   const [isCrisisOpen, setIsCrisisOpen] = useState(false);
-  const [role, setRole] = useState('student');
+  const [sessionInfo, setSessionInfo] = useState({ role: null, user: null });
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const refreshSession = async () => {
+    const result = await apiRequest('/api/auth/me');
+    setSessionInfo(result);
+    return result;
+  };
+
+  useEffect(() => {
+    refreshSession().catch(() => setSessionInfo({ role: null, user: null })).finally(() => setSessionLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (sessionLoading || sessionInfo.role !== 'user') return;
+    apiRequest('/api/activity/page-view', {
+      method: 'POST',
+      body: JSON.stringify({ path: location.pathname }),
+    }).catch(() => {});
+  }, [location.pathname, sessionInfo.role, sessionLoading]);
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest('/api/auth/logout', { method: 'POST' });
+    } finally {
+      setSessionInfo({ role: null, user: null });
+      navigate('/', { replace: true });
+    }
+  };
+
+  if (sessionLoading) {
+    return <main className="auth-loading" aria-label="Loading account"><span /></main>;
+  }
+
+  if (!sessionInfo.role) {
+    return (
+      <>
+        <AuthPage onAuthenticated={refreshSession} onOpenCrisis={() => setIsCrisisOpen(true)} />
+        <CrisisModal isOpen={isCrisisOpen} onClose={() => setIsCrisisOpen(false)} />
+      </>
+    );
+  }
+
+  if (sessionInfo.role === 'admin') {
+    return (
+      <div className="app-root">
+        <header className="top-navbar admin-navbar">
+          <Link to="/admin" className="top-navbar-logo">
+            <img src="/MindEase_logo.jpeg" alt="" className="top-navbar-logo-icon" />
+            <span className="top-navbar-brand">MindEase Admin</span>
+          </Link>
+          <button type="button" className="admin-signout" onClick={handleLogout}>Sign out</button>
+        </header>
+        <main className="main-content" role="main">
+          <Routes>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
+          </Routes>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app-root">
@@ -36,11 +103,7 @@ export default function App() {
       <div className="blob blob-4" aria-hidden="true" />
 
       {/* Liquid Glass Top Navbar */}
-      <TopNavbar 
-        onOpenCrisis={() => setIsCrisisOpen(true)} 
-        role={role} 
-        onToggleRole={setRole} 
-      />
+      <TopNavbar onOpenCrisis={() => setIsCrisisOpen(true)} user={sessionInfo.user} onLogout={handleLogout} />
 
       {/* Main Content Area (Fills space to push footer to the end) */}
       <main className="main-content" role="main">
@@ -64,7 +127,9 @@ export default function App() {
           <Route path="/booking" element={<Navigate to="/counsellor" replace />} />
 
           {/* Campus Insights & Aliases */}
-          <Route path="/campus-insights" element={<CampusInsightsPage role={role} onToggleRole={setRole} />} />
+          <Route path="/campus-insights" element={<CampusInsightsPage />} />
+          <Route path="/account" element={<AccountPage user={sessionInfo.user} onUserUpdated={refreshSession} onDeleted={() => { setSessionInfo({ role: null, user: null }); navigate('/', { replace: true }); }} />} />
+          <Route path="/admin" element={<Navigate to="/" replace />} />
           <Route path="/insights" element={<Navigate to="/campus-insights" replace />} />
           <Route path="/exam-insights" element={<Navigate to="/campus-insights" replace />} />
 

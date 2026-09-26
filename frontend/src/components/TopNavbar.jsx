@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { 
-  Sparkles, 
   Home, 
   Smile, 
   BookOpen, 
@@ -10,23 +9,15 @@ import {
   Calendar, 
   BarChart3, 
   PhoneCall, 
-  ShieldCheck,
+  CircleUserRound,
+  LogOut,
   Menu,
   X
 } from 'lucide-react';
 
-export default function TopNavbar({ onOpenCrisis, role, onToggleRole }) {
-  const navigate = useNavigate();
+export default function TopNavbar({ onOpenCrisis, user, onLogout }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handleRoleToggle = () => {
-    const newRole = role === 'student' ? 'admin' : 'student';
-    onToggleRole(newRole);
-    if (newRole === 'admin') {
-      navigate('/campus-insights');
-    }
-  };
 
   const closeMobile = () => setMobileMenuOpen(false);
 
@@ -113,15 +104,14 @@ export default function TopNavbar({ onOpenCrisis, role, onToggleRole }) {
 
       {/* Right Actions */}
       <div className="top-navbar-actions">
-        {/* Role Switcher */}
-        <button 
-          onClick={handleRoleToggle} 
-          className="role-switcher-btn" 
-          title="Toggle between Student View and Campus Admin View"
-          type="button"
-        >
-          <ShieldCheck style={{ width: 14, height: 14, color: 'var(--deep-purple)' }} />
-          <span>{role === 'student' ? 'Student View' : 'Campus Admin'}</span>
+        <span className="navbar-user-name">{user?.full_name}</span>
+        <NavLink to="/account" className="account-nav-link" aria-label="Account and activity">
+          <CircleUserRound style={{ width: 17, height: 17 }} />
+          <span>Account</span>
+        </NavLink>
+        <button className="account-logout-button" type="button" onClick={onLogout} aria-label="Sign out">
+          <LogOut style={{ width: 16, height: 16 }} />
+          <span>Sign out</span>
         </button>
 
         {/* ALWAYS-VISIBLE 'Get Help Now' Emergency Button */}
@@ -211,6 +201,14 @@ export default function TopNavbar({ onOpenCrisis, role, onToggleRole }) {
           <BarChart3 className="w-4 h-4" />
           <span>Campus Insights</span>
         </NavLink>
+        <NavLink to="/account" onClick={closeMobile} className={({ isActive }) => `top-nav-btn ${isActive ? 'active' : ''}`}>
+          <CircleUserRound className="w-4 h-4" />
+          <span>Account &amp; Activity</span>
+        </NavLink>
+        <button type="button" className="top-nav-btn mobile-signout" onClick={() => { closeMobile(); onLogout(); }}>
+          <LogOut className="w-4 h-4" />
+          <span>Sign out</span>
+        </button>
       </div>
 
     </header>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Smile, Check } from 'lucide-react';
-import { apiRequest, clientId } from '../api';
+import { apiRequest } from '../api';
 
 const MOODS = [
   { score: 5, label: 'Thriving', emoji: '🌟' },
@@ -21,7 +21,7 @@ export default function MoodPage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
-    apiRequest(`/api/moods?client_id=${encodeURIComponent(clientId())}`)
+    apiRequest('/api/moods')
       .then(rows => setMoods(rows.map(row => ({ ...row, timestamp: row.created_at }))))
       .catch(() => setMoods([]));
   }, []);
@@ -38,7 +38,7 @@ export default function MoodPage() {
 
     try {
       const saved = await apiRequest('/api/moods', { method: 'POST', body: JSON.stringify({
-        client_id: clientId(), score: selectedScore, label: selectedLabel, tags: selectedTags, note: note.trim()
+        score: selectedScore, label: selectedLabel, tags: selectedTags, note: note.trim()
       })});
       setMoods(prev => [{ ...saved, timestamp: saved.created_at }, ...prev]);
     } catch {

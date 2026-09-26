@@ -18,7 +18,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-export default function CampusInsightsPage({ role = 'admin', onToggleRole }) {
+export default function CampusInsightsPage() {
   // Sub-options in this 6th menu option:
   // 1: 'stress-index' (Campus Stress Index)
   // 2: 'exam-insights' (Exam-Season Stress Insights ★)
@@ -82,17 +82,6 @@ export default function CampusInsightsPage({ role = 'admin', onToggleRole }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-mid)', fontWeight: 500 }}>Access Portal:</span>
-          <button
-            type="button"
-            onClick={() => onToggleRole && onToggleRole(role === 'admin' ? 'student' : 'admin')}
-            className="btn-secondary"
-            style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600 }}
-          >
-            {role === 'admin' ? '🔒 Campus Admin Mode' : '👤 Student Preview Mode'}
-          </button>
-        </div>
       </div>
 
       {/* 6th Menu Sub-Options Dock (Segmented Liquid Glass Tabs) */}

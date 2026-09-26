@@ -15,24 +15,26 @@ def get_supabase():
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     return supabase
 
-def log_vent(content: str, ai_response: str):
+def log_vent(user_id: str, content: str, ai_response: str):
     """Log a vent entry to Supabase (silently fails if not configured)."""
     try:
         db = get_supabase()
         if db:
             db.table("vent_logs").insert({
+                "user_id": user_id,
                 "content": content,
                 "ai_response": ai_response
             }).execute()
     except Exception as e:
         print(f"[Supabase] vent_logs insert failed: {e}")
 
-def log_resilience(scenario: str, user_response: str, ai_feedback: str):
+def log_resilience(user_id: str, scenario: str, user_response: str, ai_feedback: str):
     """Log a resilience entry to Supabase (silently fails if not configured)."""
     try:
         db = get_supabase()
         if db:
             db.table("resilience_logs").insert({
+                "user_id": user_id,
                 "scenario": scenario,
                 "user_response": user_response,
                 "ai_feedback": ai_feedback
@@ -40,12 +42,13 @@ def log_resilience(scenario: str, user_response: str, ai_feedback: str):
     except Exception as e:
         print(f"[Supabase] resilience_logs insert failed: {e}")
 
-def log_quiz_score(score: int, total: int):
+def log_quiz_score(user_id: str, score: int, total: int):
     """Log a quiz score to Supabase (silently fails if not configured)."""
     try:
         db = get_supabase()
         if db:
             db.table("quiz_scores").insert({
+                "user_id": user_id,
                 "score": score,
                 "total": total
             }).execute()

@@ -9,28 +9,34 @@ datasource db {
 
 model VentLog {
   id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
   content    String
   aiResponse String   @map("ai_response")
   createdAt  DateTime @default(now()) @map("created_at")
+  user       MindEaseUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("vent_logs")
 }
 
 model ResilienceLog {
   id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
   scenario     String
   userResponse String   @map("user_response")
   aiFeedback   String   @map("ai_feedback")
   createdAt    DateTime @default(now()) @map("created_at")
+  user         MindEaseUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("resilience_logs")
 }
 
 model QuizScore {
   id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
   score     Int
   total     Int
   createdAt DateTime @default(now()) @map("created_at")
+  user      MindEaseUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("quiz_scores")
 }
@@ -38,6 +44,7 @@ model QuizScore {
 model JournalEntry {
   id             String   @id @default(uuid()) @db.Uuid
   clientId       String   @map("client_id")
+  userId         String?  @map("user_id") @db.Uuid
   title          String
   content        String
   tags           Json?
@@ -45,6 +52,7 @@ model JournalEntry {
   sentimentScore Float?   @map("sentiment_score")
   sentimentModel String?  @map("sentiment_model")
   createdAt      DateTime @default(now()) @map("created_at")
+  user           MindEaseUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([clientId, createdAt])
   @@map("journal_entries")
@@ -53,11 +61,13 @@ model JournalEntry {
 model MoodCheckin {
   id        String   @id @default(uuid()) @db.Uuid
   clientId  String   @map("client_id")
+  userId    String?  @map("user_id") @db.Uuid
   score     Int
   label     String
   tags      Json?
   note      String?
   createdAt DateTime @default(now()) @map("created_at")
+  user      MindEaseUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([clientId, createdAt])
   @@map("mood_checkins")
@@ -66,6 +76,7 @@ model MoodCheckin {
 model CounsellorBooking {
   id             String   @id @default(uuid()) @db.Uuid
   clientId       String   @map("client_id")
+  userId         String?  @map("user_id") @db.Uuid
   counsellorId   String   @map("counsellor_id")
   counsellorName String   @map("counsellor_name")
   role           String
@@ -76,6 +87,7 @@ model CounsellorBooking {
   note           String?
   status         String   @default("confirmed")
   createdAt      DateTime @default(now()) @map("created_at")
+  user           MindEaseUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([clientId, createdAt])
   @@map("counsellor_bookings")
@@ -85,12 +97,68 @@ model PeerMessage {
   id        String   @id @default(uuid()) @db.Uuid
   roomId    String   @map("room_id")
   clientId  String   @map("client_id")
+  userId    String?  @map("user_id") @db.Uuid
   author    String
   content   String
   likes     Int      @default(0)
   flagged   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
+  user      MindEaseUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId, createdAt])
   @@map("peer_messages")
+}
+
+model MindEaseUser {
+  id                      String               @id @db.Uuid
+  fullName                String               @map("full_name")
+  email                   String               @unique
+  mobile                  String
+  dateOfBirth             DateTime             @map("date_of_birth") @db.Date
+  activityEmailsEnabled   Boolean              @default(true) @map("activity_emails_enabled")
+  createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
+  ventLogs                VentLog[]
+  resilienceLogs          ResilienceLog[]
+  quizScores              QuizScore[]
+  journalEntries          JournalEntry[]
+  moodCheckins            MoodCheckin[]
+  counsellorBookings      CounsellorBooking[]
+  peerMessages            PeerMessage[]
+  activity                MindEaseActivity[]
+
+  @@map("mindease_users")
+}
+
+model MindEaseAdminAttempt {
+  email           String   @id
+  attempts        Int      @default(0) @db.SmallInt
+  windowStartedAt DateTime @default(now()) @map("window_started_at") @db.Timestamptz(6)
+
+  @@map("mindease_admin_attempts")
+}
+
+model MindEaseOtpChallenge {
+  email      String
+  purpose    String
+  otpDigest  String   @map("otp_digest")
+  payload    Json     @default("{}")
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  sentAt     DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+  attempts   Int      @default(0) @db.SmallInt
+
+  @@id([email, purpose])
+  @@map("mindease_otp_challenges")
+}
+
+model MindEaseActivity {
+  id        String       @id @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  eventType String       @map("event_type")
+  summary   String
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      MindEaseUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("mindease_activity")
 }

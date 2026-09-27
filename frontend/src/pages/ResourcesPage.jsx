@@ -1,21 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Wind, 
-  Headphones, 
-  Moon, 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Volume2, 
-  VolumeX, 
-  CheckCircle2, 
-  Clock, 
-  Sparkles, 
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Wind,
+  Headphones,
+  Moon,
+  Play,
+  Pause,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  CheckCircle2,
+  Clock,
+  Sparkles,
   ShieldCheck,
   Zap,
   Info,
-  Sliders
+  Sliders,
+  RefreshCw,
+  Wand2
 } from 'lucide-react';
+import { apiRequest } from '../api';
 
 export default function ResourcesPage({ onOpenCrisis }) {
   // --- Breathing State ---
@@ -39,14 +42,11 @@ export default function ResourcesPage({ onOpenCrisis }) {
   const [timerMode, setTimerMode] = useState('focus'); // 'focus' (25m), 'break' (5m)
   const timerRef = useRef(null);
 
-  // --- Sleep Checklist State ---
-  const [sleepTasks, setSleepTasks] = useState([
-    { id: 1, text: 'No screens or blue light 45 min before sleep', done: false },
-    { id: 2, text: 'Room temperature cooled to ~19°C (66°F)', done: false },
-    { id: 3, text: 'Brain-dump tomorrow’s to-do items into Journal', done: false },
-    { id: 4, text: 'No caffeine after 4:00 PM', done: false },
-    { id: 5, text: '5-minute 4-7-8 breathing practice in bed', done: false }
-  ]);
+  // --- AI Wellness Checklist State ---
+  const [sleepTasks, setSleepTasks] = useState([]);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [checklistError, setChecklistError] = useState('');
+  const [checklistGenerated, setChecklistGenerated] = useState(false);
 
   // ==========================================
   // Breathing Logic
@@ -280,8 +280,28 @@ export default function ResourcesPage({ onOpenCrisis }) {
     setStudySeconds(0);
   };
 
+  // --- AI Checklist: generate from latest journal + mood via Groq ---
+  const generateChecklist = useCallback(async () => {
+    setChecklistLoading(true);
+    setChecklistError('');
+    try {
+      const data = await apiRequest('/api/checklist/generate', { method: 'POST' });
+      setSleepTasks(
+        data.items.map((text, i) => ({ id: i + 1, text, done: false }))
+      );
+      setChecklistGenerated(true);
+    } catch (err) {
+      setChecklistError(err.message || 'Could not generate checklist. Please try again.');
+    } finally {
+      setChecklistLoading(false);
+    }
+  }, []);
+
+  // Auto-generate on mount
+  useEffect(() => { generateChecklist(); }, [generateChecklist]);
+
   const toggleSleepTask = (id) => {
-    setSleepTasks(tasks => 
+    setSleepTasks(tasks =>
       tasks.map(t => t.id === id ? { ...t, done: !t.done } : t)
     );
   };
@@ -635,78 +655,131 @@ export default function ResourcesPage({ onOpenCrisis }) {
           </div>
         </div>
 
-        {/* Restful Sleep Routine Card */}
+        {/* AI-Generated Wellness Checklist Card */}
         <div className="glass-card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
+            {/* Card header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(201, 184, 232, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Moon className="w-5 h-5 text-indigo-700" />
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(201, 184, 232, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Wand2 size={18} style={{ color: '#5b21b6' }} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Restful Sleep Checklist</h3>
+                  <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Your Wellness Checklist</h3>
                   <div style={{ fontSize: '11.5px', color: 'var(--text-mid)', marginTop: '2px' }}>
-                    Circadian habits for deep restorative REM cycles
+                    AI-personalised from your latest journal &amp; mood
                   </div>
                 </div>
               </div>
 
-              {/* Progress counter pill */}
-              <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '50px', background: completedSleepTasks === 5 ? 'var(--mint)' : 'rgba(255,255,255,0.7)', color: completedSleepTasks === 5 ? '#166534' : 'var(--text-mid)', border: '1px solid var(--card-border)' }}>
-                {completedSleepTasks} of {sleepTasks.length} Checked
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                {/* Progress pill — only when items exist */}
+                {sleepTasks.length > 0 && !checklistLoading && (
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '50px', background: completedSleepTasks === sleepTasks.length ? 'var(--mint)' : 'rgba(255,255,255,0.7)', color: completedSleepTasks === sleepTasks.length ? '#166534' : 'var(--text-mid)', border: '1px solid var(--card-border)' }}>
+                    {completedSleepTasks}/{sleepTasks.length}
+                  </span>
+                )}
+                {/* Regenerate button */}
+                <button
+                  type="button"
+                  onClick={generateChecklist}
+                  disabled={checklistLoading}
+                  title="Regenerate checklist from latest journal & mood"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '20px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.7)', color: 'var(--deep-purple)', cursor: checklistLoading ? 'not-allowed' : 'pointer', opacity: checklistLoading ? 0.6 : 1 }}
+                >
+                  <RefreshCw size={11} style={{ animation: checklistLoading ? 'spin 1s linear infinite' : 'none' }} />
+                  {checklistLoading ? 'Generating…' : 'Regenerate'}
+                </button>
+              </div>
             </div>
+
+            {/* Error state */}
+            {checklistError && !checklistLoading && (
+              <div style={{ margin: '14px 0 6px', padding: '10px 14px', borderRadius: 'var(--radius-md)', background: '#fee2e2', border: '1px solid #fca5a5', fontSize: '12.5px', color: '#991b1b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <span>{checklistError}</span>
+                <button type="button" onClick={generateChecklist} style={{ fontSize: '11px', fontWeight: 700, color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Try again</button>
+              </div>
+            )}
+
+            {/* Loading skeleton */}
+            {checklistLoading && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '18px 0' }}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <div key={n} style={{ height: '42px', borderRadius: 'var(--radius-md)', background: 'rgba(201,184,232,0.15)', animation: 'pulse 1.4s ease-in-out infinite', display: 'flex', alignItems: 'center', padding: '0 14px', gap: '12px' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(201,184,232,0.35)', flexShrink: 0 }} />
+                    <div style={{ height: '10px', borderRadius: '6px', background: 'rgba(201,184,232,0.35)', flex: 1 }} />
+                  </div>
+                ))}
+                <div style={{ fontSize: '11.5px', color: 'var(--text-mid)', textAlign: 'center', marginTop: '4px' }}>
+                  <Sparkles size={12} style={{ display: 'inline', marginRight: 4 }} />
+                  Reading your journal and mood to personalise your checklist…
+                </div>
+              </div>
+            )}
 
             {/* Checklist items */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '18px 0' }}>
-              {sleepTasks.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => toggleSleepTask(task.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-md)',
-                    background: task.done ? 'rgba(184, 232, 212, 0.40)' : 'rgba(255,255,255,0.70)',
-                    border: '1px solid',
-                    borderColor: task.done ? 'rgba(184, 232, 212, 0.9)' : 'var(--card-border)',
-                    cursor: 'pointer',
-                    transition: 'var(--transition)'
-                  }}
-                >
-                  <div style={{
-                    width: '18px',
-                    height: '18px',
-                    borderRadius: '50%',
-                    border: task.done ? 'none' : '2px solid var(--card-border)',
-                    background: task.done ? 'var(--mint)' : 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    {task.done && <CheckCircle2 className="w-4 h-4 text-emerald-800" />}
+            {!checklistLoading && sleepTasks.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '18px 0' }}>
+                {sleepTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    onClick={() => toggleSleepTask(task.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      background: task.done ? 'rgba(184, 232, 212, 0.40)' : 'rgba(255,255,255,0.70)',
+                      border: '1px solid',
+                      borderColor: task.done ? 'rgba(184, 232, 212, 0.9)' : 'var(--card-border)',
+                      cursor: 'pointer',
+                      transition: 'var(--transition)'
+                    }}
+                  >
+                    <div style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: task.done ? 'none' : '2px solid var(--card-border)',
+                      background: task.done ? 'var(--mint)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {task.done && <CheckCircle2 size={14} style={{ color: '#166534' }} />}
+                    </div>
+                    <span style={{
+                      fontSize: '12.5px',
+                      color: task.done ? 'var(--text-light)' : 'var(--text-dark)',
+                      textDecoration: task.done ? 'line-through' : 'none',
+                      flex: 1
+                    }}>
+                      {task.text}
+                    </span>
                   </div>
-                  <span style={{ 
-                    fontSize: '12.5px', 
-                    color: task.done ? 'var(--text-light)' : 'var(--text-dark)',
-                    textDecoration: task.done ? 'line-through' : 'none',
-                    flex: 1
-                  }}>
-                    {task.text}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty state: no data yet, not loading, no error */}
+            {!checklistLoading && sleepTasks.length === 0 && !checklistError && (
+              <div style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--text-mid)', fontSize: '12.5px' }}>
+                <Wand2 size={28} style={{ color: 'var(--deep-purple)', opacity: 0.4, marginBottom: 8 }} />
+                <div>Add a journal entry or mood check-in first, then your personalised checklist will appear here.</div>
+              </div>
+            )}
           </div>
 
-          <div style={{ fontSize: '11.5px', color: 'var(--deep-purple)', fontWeight: 600, textAlign: 'center', paddingTop: '8px' }}>
-            {completedSleepTasks === 5 
-              ? '✨ Outstanding! Your nervous system is primed for uninterrupted rest.' 
-              : 'Complete your evening wind-down habits before heading to bed 🌙'}
-          </div>
+          {/* Footer message */}
+          {!checklistLoading && sleepTasks.length > 0 && (
+            <div style={{ fontSize: '11.5px', color: 'var(--deep-purple)', fontWeight: 600, textAlign: 'center', paddingTop: '8px' }}>
+              {completedSleepTasks === sleepTasks.length
+                ? '✨ All done — you\'ve taken real steps toward feeling better today.'
+                : `${sleepTasks.length - completedSleepTasks} item${sleepTasks.length - completedSleepTasks !== 1 ? 's' : ''} left — take it one step at a time 🌿`}
+            </div>
+          )}
         </div>
 
       </div>

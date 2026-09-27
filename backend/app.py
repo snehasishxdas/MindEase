@@ -19,7 +19,11 @@ from groq_client import ask_groq, ask_groq_chat
 from superbase_client import log_vent, log_resilience, log_quiz_score
 from sentiment import analyze_sentiment
 from burnout import assess_journal
-from database import connection, create_booking, create_journal, create_mood, create_peer_message, fetch_all
+from database import (
+    connection, create_booking, create_journal, create_mood,
+    create_peer_message, fetch_all,
+    fetch_peer_rooms, create_peer_room, join_peer_room, leave_peer_room, get_joined_rooms,
+)
 
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 app = Flask(__name__, template_folder=frontend_dir, static_folder=os.path.join(frontend_dir, "static"))
@@ -138,6 +142,20 @@ ROLEPLAY_SYSTEM_PROMPT = """You are playing the other person in a realistic rehe
 
 ROLEPLAY_DEBRIEF_PROMPT = """You are a supportive communication-skills coach debriefing a short role-play rehearsal. Briefly reflect what the student did effectively, offer one specific alternative phrase or next step they could try, and ask how the practice felt. Be warm and nonjudgmental; do not diagnose or imply there is one perfect response. Keep the debrief under 150 words."""
 
+SCENARIO_SUGGEST_PROMPT = """You are a student wellness assistant. You will be given a student's recent journal entries and mood check-ins. Based on the emotional themes, stressors, and patterns across ALL of these inputs, choose the single most relevant role-play scenario for this student to practise right now.
+
+The available scenario IDs and their descriptions are:
+- group-project: Peer pressure on a group project — a classmate expects you to do most of the work
+- study-demands: Constant study group demands — a friend wants your notes late every night
+- harsh-feedback: Harsh feedback from a professor — your presentation is criticized in front of class
+- comparison-spiral: Social media comparison spiral — feeling behind after hearing a peer's achievements
+- deadline-clash: Overwhelming deadline clash — several assignments due together plus a group member asking for more
+- family-career: Unsolicited family career advice — family pushes a career path you do not want
+
+Rules:
+- Respond with ONLY valid JSON, no markdown fences, no explanation.
+- Format: {"scenario_id": "<one of the six IDs above>", "reason": "<one warm sentence explaining why this scenario fits this student right now, addressed to them as 'you'>"}"""
+
 # ─── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -240,6 +258,71 @@ def resilience_roleplay():
     except Exception as error:
         app.logger.error("Role-play request failed: %s", error)
         return jsonify({"error": "The practice conversation could not respond. Please try again."}), 503
+
+
+@app.route("/api/resilience/suggest-scenario", methods=["POST"])
+@user_required
+def suggest_scenario():
+    import json as _json
+
+    user_id = str(g.current_user["id"])
+
+    # Gather the last 3 journal entries
+    journals = fetch_all(
+        "SELECT title, content, sentiment_label, created_at "
+        "FROM journal_entries WHERE user_id = %s ORDER BY created_at DESC LIMIT 3",
+        (user_id,),
+    )
+    # Gather the last 3 mood check-ins
+    moods = fetch_all(
+        "SELECT score, label, note, created_at "
+        "FROM mood_checkins WHERE user_id = %s ORDER BY created_at DESC LIMIT 3",
+        (user_id,),
+    )
+
+    if not journals and not moods:
+        return jsonify({"error": "no_data"}), 200
+
+    # Build a rich context from all gathered inputs
+    context_parts = []
+    for i, j in enumerate(journals, 1):
+        part = f"Journal {i} (titled \"{j.get('title', 'Untitled')}\"):\n{j.get('content', '')}"
+        if j.get("sentiment_label"):
+            part += f"\nSentiment: {j['sentiment_label']}"
+        context_parts.append(part)
+
+    for i, m in enumerate(moods, 1):
+        part = f"Mood check-in {i}: {m.get('score', '?')}/10 — {m.get('label', '')}"
+        if m.get("note"):
+            part += f"\nNote: {m['note']}"
+        context_parts.append(part)
+
+    user_message = "\n\n".join(context_parts) + "\n\nBased on all of the above, which scenario should I practise?"
+
+    try:
+        raw = ask_groq(SCENARIO_SUGGEST_PROMPT, user_message)
+
+        clean = raw.strip()
+        if clean.startswith("```"):
+            clean = clean.split("```")[1]
+            if clean.startswith("json"):
+                clean = clean[4:]
+        clean = clean.strip()
+
+        result = _json.loads(clean)
+        scenario_id = result.get("scenario_id", "").strip()
+        reason = result.get("reason", "").strip()
+
+        if scenario_id not in ROLEPLAY_SCENARIOS:
+            return jsonify({"error": "invalid_scenario"}), 200
+
+        scenario = dict(ROLEPLAY_SCENARIOS[scenario_id])
+        scenario["id"] = scenario_id
+        return jsonify({"scenario_id": scenario_id, "scenario": scenario, "reason": reason})
+
+    except Exception as e:
+        app.logger.error("Scenario suggestion error: %s", e)
+        return jsonify({"error": "suggestion_failed"}), 200  # soft fail — frontend falls back gracefully
 
 
 @app.route("/api/quiz-score", methods=["POST"])
@@ -366,13 +449,169 @@ def peer_messages():
     data = request.get_json() or {}
     if not all(data.get(field) for field in ("roomId", "author", "content")):
         return jsonify({"error": "roomId, author, and content are required"}), 400
+    content = data["content"].strip()
+    if len(content) > 400:
+        return jsonify({"error": "Message must be 400 characters or fewer."}), 400
     try:
-        result = create_peer_message(data["roomId"], str(g.current_user["id"]), data["author"], data["content"].strip())
+        result = create_peer_message(data["roomId"], str(g.current_user["id"]), data["author"], content)
         record_activity(g.current_user["id"], "peer_message", "Posted a message in a peer support room.")
         return jsonify(serialize_row(result)), 201
     except Exception as e:
         print(f"[Peer API Error] {e}")
         return jsonify({"error": "Peer message could not be saved."}), 503
+
+
+# ─── Peer Rooms CRUD + Membership ─────────────────────────────────────────────
+
+ROOM_NAME_MAX   = 60
+ROOM_DESC_MAX   = 160
+ALLOWED_ICONS   = ["💬","📚","🌱","🧠","☀️","🎵","🏃","🎨","💡","🤝","🌙","❤️","🔥","🌈","🎓","🧘","💪","🌸"]
+
+
+@app.route("/api/peer-rooms", methods=["GET", "POST"])
+@user_required
+def peer_rooms_api():
+    if request.method == "GET":
+        try:
+            rooms = fetch_peer_rooms()
+            joined = get_joined_rooms(str(g.current_user["id"]))
+            result = []
+            for r in rooms:
+                row = serialize_row(r)
+                row["joined"] = r["id"] in joined
+                result.append(row)
+            return jsonify(result)
+        except Exception as e:
+            app.logger.error("Peer rooms fetch error: %s", e)
+            return jsonify({"error": "Could not load rooms."}), 503
+
+    # POST — create a new room
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    description = (data.get("description") or "").strip()
+    icon = (data.get("icon") or "💬").strip()
+
+    if not name:
+        return jsonify({"error": "Room name is required."}), 400
+    if len(name) > ROOM_NAME_MAX:
+        return jsonify({"error": f"Room name must be {ROOM_NAME_MAX} characters or fewer."}), 400
+    if len(description) > ROOM_DESC_MAX:
+        return jsonify({"error": f"Description must be {ROOM_DESC_MAX} characters or fewer."}), 400
+    if icon not in ALLOWED_ICONS:
+        icon = "💬"
+
+    try:
+        room = create_peer_room(name, description, icon, str(g.current_user["id"]))
+        record_activity(g.current_user["id"], "peer_room_created", f"Created peer room: {name}")
+        row = serialize_row(room)
+        row["joined"] = False
+        return jsonify(row), 201
+    except Exception as e:
+        app.logger.error("Create peer room error: %s", e)
+        return jsonify({"error": "Room could not be created."}), 503
+
+
+@app.route("/api/peer-rooms/<room_id>/join", methods=["POST"])
+@user_required
+def peer_room_join(room_id):
+    try:
+        member_count = join_peer_room(room_id, str(g.current_user["id"]))
+        record_activity(g.current_user["id"], "peer_room_joined", f"Joined peer room {room_id}.")
+        return jsonify({"ok": True, "member_count": member_count})
+    except Exception as e:
+        app.logger.error("Join peer room error: %s", e)
+        return jsonify({"error": "Could not join room."}), 503
+
+
+@app.route("/api/peer-rooms/<room_id>/leave", methods=["POST"])
+@user_required
+def peer_room_leave(room_id):
+    try:
+        member_count = leave_peer_room(room_id, str(g.current_user["id"]))
+        return jsonify({"ok": True, "member_count": member_count})
+    except Exception as e:
+        app.logger.error("Leave peer room error: %s", e)
+        return jsonify({"error": "Could not leave room."}), 503
+
+
+# ─── Personalised Wellness Checklist ──────────────────────────────────────────
+
+CHECKLIST_SYSTEM_PROMPT = """You are a compassionate student wellness coach. Based on the student's most recent journal entry and mood check-in, generate a short, personalised wellness checklist of 5 to 7 small, immediately actionable items that will genuinely help calm their current emotional state and improve their situation today.
+
+Rules:
+- Each item must be concrete, specific, and achievable within the next few hours.
+- Tailor items directly to the content of their journal and mood — do not give generic advice.
+- Use warm, encouraging language (second-person "you").
+- Output ONLY a valid JSON array of strings, no other text, no markdown fences, no explanation.
+- Example format: ["Drink a glass of water right now", "Step outside for 5 minutes"]
+- Maximum 7 items, minimum 5 items."""
+
+
+@app.route("/api/checklist/generate", methods=["POST"])
+@user_required
+def generate_checklist():
+    import json as _json
+
+    user_id = str(g.current_user["id"])
+
+    # Fetch the most recent journal entry
+    journals = fetch_all(
+        "SELECT title, content, sentiment_label FROM journal_entries "
+        "WHERE user_id = %s ORDER BY created_at DESC LIMIT 1",
+        (user_id,),
+    )
+    # Fetch the most recent mood check-in
+    moods = fetch_all(
+        "SELECT score, label, note FROM mood_checkins "
+        "WHERE user_id = %s ORDER BY created_at DESC LIMIT 1",
+        (user_id,),
+    )
+
+    # Build context summary for the LLM
+    journal_ctx = "No recent journal entry available."
+    if journals:
+        j = journals[0]
+        journal_ctx = f"Journal title: {j.get('title', '')}\nContent: {j.get('content', '')}"
+        if j.get("sentiment_label"):
+            journal_ctx += f"\nSentiment detected: {j['sentiment_label']}"
+
+    mood_ctx = "No recent mood check-in available."
+    if moods:
+        m = moods[0]
+        mood_ctx = f"Mood score: {m.get('score', '')}/10 — {m.get('label', '')}"
+        if m.get("note"):
+            mood_ctx += f"\nMood note: {m['note']}"
+
+    user_message = (
+        f"Here is my most recent journal entry:\n{journal_ctx}\n\n"
+        f"Here is my most recent mood check-in:\n{mood_ctx}\n\n"
+        "Based on this, please generate a personalised wellness checklist for me right now."
+    )
+
+    try:
+        raw = ask_groq(CHECKLIST_SYSTEM_PROMPT, user_message)
+
+        # Strip any accidental markdown fences the model may add
+        clean = raw.strip()
+        if clean.startswith("```"):
+            clean = clean.split("```")[1]
+            if clean.startswith("json"):
+                clean = clean[4:]
+        clean = clean.strip()
+
+        items = _json.loads(clean)
+
+        # Validate: must be a list of strings, 3–10 items
+        if not isinstance(items, list) or not (3 <= len(items) <= 10):
+            raise ValueError("Unexpected checklist shape")
+        items = [str(i).strip() for i in items if isinstance(i, str) and i.strip()]
+
+        record_activity(user_id, "checklist_generated", "Generated a personalised wellness checklist.")
+        return jsonify({"items": items})
+
+    except Exception as e:
+        app.logger.error("Checklist generation error: %s", e)
+        return jsonify({"error": "Could not generate checklist. Please try again."}), 503
 
 
 # ─── Run ───────────────────────────────────────────────────────────────────────

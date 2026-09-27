@@ -267,7 +267,7 @@ export default function CounsellorPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
           {COUNSELLORS.map((c) => (
-            <div key={c.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div key={c.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', padding: '24px' }}>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ 
                   width: '48px', 

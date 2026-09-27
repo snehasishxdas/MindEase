@@ -375,6 +375,16 @@ h1, h2, h3, h4, h5, h6, p, span, div, a, button, label {
   50% { transform: scale(1.03); box-shadow: 0 6px 24px rgba(233, 30, 99, 0.48); }
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 .btn-crisis-nav:hover {
   transform: translateY(-2px) scale(1.03);
   box-shadow: 0 8px 26px rgba(233, 30, 99, 0.52);
@@ -441,7 +451,6 @@ h1, h2, h3, h4, h5, h6, p, span, div, a, button, label {
   width: 100%;
   margin-top: auto;
   position: relative;
-  z-index: 10;
   
   background: linear-gradient(
     180deg, 

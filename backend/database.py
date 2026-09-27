@@ -77,3 +77,60 @@ def create_peer_message(room_id, user_id, author, content):
            RETURNING *""",
         (str(uuid4()), room_id, user_id, user_id, author, content),
     )
+
+
+# ─── Peer rooms ───────────────────────────────────────────────────────────────
+
+def fetch_peer_rooms():
+    """Return all rooms ordered by built-ins first, then newest user-created."""
+    return fetch_all(
+        "SELECT * FROM public.peer_rooms ORDER BY is_builtin DESC, created_at ASC"
+    )
+
+
+def create_peer_room(name, description, icon, created_by):
+    room_id = str(uuid4())
+    return fetch_one(
+        """INSERT INTO public.peer_rooms (id, name, description, icon, is_builtin, created_by)
+              VALUES (%s, %s, %s, %s, FALSE, %s)
+           RETURNING *""",
+        (room_id, name.strip(), description.strip(), icon.strip() or "💬", created_by),
+    )
+
+
+def join_peer_room(room_id, user_id):
+    """Insert membership row; ignore if already joined. Returns current member_count."""
+    with connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(
+            """INSERT INTO public.peer_room_members (room_id, user_id)
+               VALUES (%s, %s) ON CONFLICT DO NOTHING""",
+            (room_id, user_id),
+        )
+        cursor.execute(
+            "SELECT member_count FROM public.peer_rooms WHERE id = %s", (room_id,)
+        )
+        row = cursor.fetchone()
+        return dict(row)["member_count"] if row else 0
+
+
+def leave_peer_room(room_id, user_id):
+    """Remove membership row. Returns current member_count."""
+    with connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(
+            "DELETE FROM public.peer_room_members WHERE room_id = %s AND user_id = %s",
+            (room_id, user_id),
+        )
+        cursor.execute(
+            "SELECT member_count FROM public.peer_rooms WHERE id = %s", (room_id,)
+        )
+        row = cursor.fetchone()
+        return dict(row)["member_count"] if row else 0
+
+
+def get_joined_rooms(user_id):
+    """Return set of room_ids the user has joined."""
+    rows = fetch_all(
+        "SELECT room_id FROM public.peer_room_members WHERE user_id = %s",
+        (user_id,),
+    )
+    return {r["room_id"] for r in rows}

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { apiRequest } from '../api';
 import MindMirrorMark from './MindMirrorMark';
-import { normalizeLang, languageLabel, toBCP47 } from '../utils/languageDetect';
+import { normalizeLang, languageLabel, toBCP47, detectScriptLang } from '../utils/languageDetect';
 
 // ─── Crisis keywords (English; backend also screens all languages) ────────────
 const CRISIS_KEYWORDS = [
@@ -294,6 +294,8 @@ export default function FloatingChatbot({ onOpenCrisis }) {
     { code: 'de', label: 'Deutsch' },
     { code: 'es', label: 'Español' },
     { code: 'pt', label: 'Português' },
+    { code: 'it', label: 'Italiano' },
+    { code: 'nl', label: 'Nederlands' },
     { code: 'ru', label: 'Русский' },
     { code: 'ar', label: 'العربية' },
     { code: 'zh', label: '中文' },
@@ -468,7 +470,15 @@ export default function FloatingChatbot({ onOpenCrisis }) {
             <input
               type="text"
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInputText(val);
+                // Auto-detect non-Latin scripts from typed characters and update
+                // the active language so the badge, TTS, and backend prompt all
+                // reflect what the user is actually writing.
+                const detected = detectScriptLang(val);
+                if (detected) setDetectedLang(detected);
+              }}
               placeholder={`Share what is on your mind… (${currentLangLabel})`}
               className="styled-input"
               style={{ padding: '8px 12px', fontSize: 12.5 }}

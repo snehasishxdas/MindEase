@@ -3,9 +3,9 @@
  *
  * Strategy:
  *  1. Use the BCP-47 language tag returned by the Web Speech API recognition result.
- *  2. If not available, use a small trigram-frequency heuristic to distinguish
- *     a set of languages commonly spoken across India, Europe and East Asia that
- *     are likely to appear in a student wellness context.
+ *  2. For typed text, use Unicode script-range analysis to identify non-Latin
+ *     scripts (Devanagari, Bengali, Tamil, Arabic, CJK, etc.) — instant and
+ *     dependency-free.
  *  3. Falls back to the browser UI language, then "en".
  */
 
@@ -118,4 +118,57 @@ export function pickVoice(langCode) {
   if (anyPrefix) return anyPrefix;
 
   return null;
+}
+
+// ─── Unicode-script based auto-detection for typed text ────────────────────
+//
+// We test Unicode block ranges in priority order. Each entry is:
+//   [regex, langCode]
+// The first match wins. Latin text returns null (caller keeps current lang).
+//
+const SCRIPT_PATTERNS = [
+  // Devanagari — Hindi, Marathi (we default to 'hi'; user can refine via picker)
+  [/[\u0900-\u097F]/, 'hi'],
+  // Bengali
+  [/[\u0980-\u09FF]/, 'bn'],
+  // Gurmukhi (Punjabi)
+  [/[\u0A00-\u0A7F]/, 'pa'],
+  // Gujarati
+  [/[\u0A80-\u0AFF]/, 'gu'],
+  // Oriya / Odia — mapped to 'or' but not in our list; skip
+  // Tamil
+  [/[\u0B80-\u0BFF]/, 'ta'],
+  // Telugu
+  [/[\u0C00-\u0C7F]/, 'te'],
+  // Kannada
+  [/[\u0C80-\u0CFF]/, 'kn'],
+  // Malayalam
+  [/[\u0D00-\u0D7F]/, 'ml'],
+  // Arabic / Urdu (Arabic and Urdu share the same block; we use 'ar' as default)
+  [/[\u0600-\u06FF]/, 'ar'],
+  // CJK Unified Ideographs — Chinese (simplified default)
+  [/[\u4E00-\u9FFF\u3400-\u4DBF]/, 'zh'],
+  // Hiragana / Katakana — Japanese
+  [/[\u3040-\u30FF]/, 'ja'],
+  // Hangul — Korean
+  [/[\uAC00-\uD7AF\u1100-\u11FF]/, 'ko'],
+  // Cyrillic — Russian
+  [/[\u0400-\u04FF]/, 'ru'],
+];
+
+/**
+ * Detect language from typed text using Unicode script analysis.
+ *
+ * Returns an ISO-639-1 code if a non-Latin script is detected,
+ * or null if the text is Latin / unrecognised (caller should keep current lang).
+ *
+ * Only fires when the text is at least 2 characters long to avoid flickering
+ * on the first keypress.
+ */
+export function detectScriptLang(text) {
+  if (!text || text.trim().length < 2) return null;
+  for (const [pattern, code] of SCRIPT_PATTERNS) {
+    if (pattern.test(text)) return code;
+  }
+  return null; // Latin or unknown — keep current language
 }

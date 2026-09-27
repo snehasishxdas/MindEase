@@ -96,6 +96,14 @@ class AuthRouteTests(unittest.TestCase):
         self.assertIn("If an account exists", response.get_json()["message"])
         send_otp.assert_not_called()
 
+    def test_login_does_not_disclose_email_delivery_failure(self):
+        with patch.object(auth, "fetch_one", return_value=USER), patch.object(
+            auth, "_send_otp", side_effect=RuntimeError("SMTP credentials are missing")
+        ):
+            response = self.client.post("/api/auth/login", json={"email": USER["email"]})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("If an account exists", response.get_json()["message"])
+
     def test_registration_verification_creates_account_and_session(self):
         pending_profile = {
             "full_name": "Test User",

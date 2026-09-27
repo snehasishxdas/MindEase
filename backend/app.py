@@ -6,7 +6,9 @@ from flask import Flask, g, render_template, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env.local")
+project_root = Path(__file__).resolve().parents[1]
+load_dotenv(project_root / ".env.local")
+load_dotenv(project_root / ".env")
 
 backend_dir = str(Path(__file__).resolve().parent)
 if backend_dir not in sys.path:

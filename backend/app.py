@@ -41,14 +41,58 @@ def serialize_row(row):
         return row
     return {key: value.isoformat() if hasattr(value, "isoformat") else value for key, value in row.items()}
 
+# ─── Language helpers ──────────────────────────────────────────────────────────
+
+# Map ISO-639-1 codes to human-readable names for the system prompt instruction.
+_LANG_NAMES = {
+    "en": "English", "hi": "Hindi", "bn": "Bengali", "ta": "Tamil",
+    "te": "Telugu", "mr": "Marathi", "gu": "Gujarati", "kn": "Kannada",
+    "ml": "Malayalam", "pa": "Punjabi", "ur": "Urdu",
+    "fr": "French", "de": "German", "es": "Spanish", "pt": "Portuguese",
+    "it": "Italian", "nl": "Dutch", "ru": "Russian", "ar": "Arabic",
+    "zh": "Chinese", "ja": "Japanese", "ko": "Korean",
+}
+
+_ALLOWED_LANGS = set(_LANG_NAMES.keys())
+
+
+def resolve_language(client_lang: str | None) -> str:
+    """Return the best ISO-639-1 code for the conversation.
+
+    Trusts the language code sent by the client (chosen by the user or auto-
+    detected by the browser's Speech Recognition API, which is far more
+    accurate than any text-based heuristic on short messages).
+    Falls back to "en" if the code is absent or unrecognised.
+    """
+    if client_lang:
+        base = client_lang.split("-")[0].lower()
+        if base in _ALLOWED_LANGS:
+            return base
+    return "en"
+
+
+def build_vent_prompt(language_code: str) -> str:
+    """Return the VENT system prompt with a language instruction appended."""
+    lang_name = _LANG_NAMES.get(language_code, language_code.upper())
+    lang_instruction = (
+        f"\n\nIMPORTANT: The student is communicating in {lang_name}. "
+        f"You MUST reply entirely in {lang_name}. "
+        "Do not switch to English or any other language under any circumstances."
+    )
+    return VENT_SYSTEM_PROMPT_BASE + lang_instruction
+
+
 # ─── System Prompts ────────────────────────────────────────────────────────────
 
-VENT_SYSTEM_PROMPT = """You are a compassionate student wellness assistant. The student has shared something personal. Your job is to:
+VENT_SYSTEM_PROMPT_BASE = """You are a compassionate student wellness assistant. The student has shared something personal. Your job is to:
 (1) Identify signs of academic burnout, emotional exhaustion, or stress in their message,
 (2) Acknowledge their feelings warmly and non-judgementally,
 (3) Suggest 2–3 specific, practical coping mechanisms suited to students,
 (4) Keep your tone gentle, warm, and encouraging.
 Do not diagnose. Do not be clinical. Use empathetic, conversational language."""
+
+# Kept for backward compatibility with other call sites
+VENT_SYSTEM_PROMPT = VENT_SYSTEM_PROMPT_BASE
 
 RESILIENCE_SYSTEM_PROMPT = """You are a resilience coach for students. The student has been given a social or academic scenario and has written how they would respond. Your job is to:
 (1) Analyse whether their response demonstrates healthy boundary-setting,
@@ -109,12 +153,16 @@ def vent():
         return jsonify({"error": "No text provided"}), 400
 
     user_text = data["text"].strip()
+    # Accept optional language hint from the client (e.g. "hi", "ta", "fr").
+    client_lang = (data.get("language") or "").strip() or None
+    language = resolve_language(client_lang)
+    system_prompt = build_vent_prompt(language)
 
     try:
-        ai_response = ask_groq(VENT_SYSTEM_PROMPT, user_text)
+        ai_response = ask_groq(system_prompt, user_text)
         log_vent(str(g.current_user["id"]), user_text, ai_response)
         record_activity(g.current_user["id"], "support_chat", "Used the private support chat.")
-        return jsonify({"response": ai_response})
+        return jsonify({"response": ai_response, "language": language})
     except Exception as e:
         print(f"[Vent API Error] {e}")
         return jsonify({"error": "Something went wrong. Please try again."}), 500
